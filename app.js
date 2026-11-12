@@ -1,7 +1,4 @@
-/* NEXURE&LAND — complete frontend preview.
-   All customer, cart, product and order data is stored locally in this browser only.
-   No authentication, payment processing, database or secure admin permissions exist yet.
-*/
+/* NEXURE&LAND — Supabase email OTP authentication + per-user cloud cart. Checkout/orders and admin remain preview-only. */
 "use strict";
 const $ = id => document.getElementById(id);
 const STORE = {products:"nl_products_v2",cart:"nl_cart_v2",wishlist:"nl_wishlist_v2",orders:"nl_orders_v2",customers:"nl_customers_v2",session:"nl_customer_session_v2",newsletter:"nl_newsletter_v2"};
@@ -26,14 +23,41 @@ function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt
 function money(v){return new Intl.NumberFormat("en-PK",{style:"currency",currency:"PKR",maximumFractionDigits:0}).format(Number(v)||0)}
 function makeId(prefix="nl"){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`}
 let products=read(STORE.products,null)||seedProducts,cart=read(STORE.cart,[]),wishlist=read(STORE.wishlist,[]),orders=read(STORE.orders,[]),customers=read(STORE.customers,[]);
-let currentCustomerEmail=sessionStorage.getItem(STORE.session)||"",activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer;
+let authUser=null, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false;
 function toast(message){let el=$("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast-message";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600)}
-function currentCustomer(){return customers.find(c=>c.email.toLowerCase()===currentCustomerEmail.toLowerCase())||null}
+function currentCustomer(){return authUser?{name:authUser.user_metadata?.full_name||authUser.email?.split("@")[0]||"Customer",email:authUser.email||"",phone:authUser.user_metadata?.phone||""}:null}
 function saveAll(){write(STORE.products,products);write(STORE.cart,cart);write(STORE.wishlist,wishlist);write(STORE.orders,orders);write(STORE.customers,customers)}
 function countCart(){return cart.reduce((s,i)=>s+Number(i.qty||0),0)}
 function subtotal(){return cart.reduce((s,i)=>s+Number(i.price||0)*Number(i.qty||0),0)}
 function cartKey(id,size,color){return `${id}::${size}::${color}`}
 function stockFor(id){return Number(products.find(p=>String(p.id)===String(id))?.stock||0)}
+
+async function getSignedInUser(){const {data:{user},error}=await supabaseClient.auth.getUser();if(error)throw error;authUser=user;return user;}
+async function loadCloudCart(){
+ if(!supabaseClient)throw new Error("Supabase client is unavailable. Refresh the page and try again.");
+ if(!authUser)return;
+ const {data,error}=await supabaseClient.from("cart_items").select("item_key,product_id,product_name,unit_price,image_url,quantity,size,color").eq("user_id",authUser.id);
+ if(error)throw error;
+ cart=(data||[]).map(r=>({key:r.item_key,id:r.product_id,name:r.product_name,price:Number(r.unit_price)||0,image_url:r.image_url||"",qty:Number(r.quantity)||1,size:r.size||"M",color:r.color||"Black"}));
+ write(STORE.cart,cart);renderCart();
+}
+async function saveCloudCartItem(item){
+ if(!supabaseClient)throw new Error("Online cart is unavailable because Supabase did not load.");
+ if(!authUser)throw new Error("Please sign in to save your bag online.");
+ if(!item?.key||!item?.id||!item?.name)throw new Error("This product cannot be saved. Refresh and try again.");
+ if(!Number.isInteger(Number(item.qty))||Number(item.qty)<1)throw new Error("Choose a valid item quantity.");
+ const row={user_id:authUser.id,item_key:item.key,product_id:String(item.id),product_name:item.name,unit_price:Number(item.price)||0,image_url:item.image_url||"",quantity:Number(item.qty),size:item.size||"M",color:item.color||"Black",updated_at:new Date().toISOString()};
+ const {error}=await supabaseClient.from("cart_items").upsert(row,{onConflict:"user_id,item_key"});if(error)throw error;
+}
+async function deleteCloudCartItem(key){if(!supabaseClient)throw new Error("Online cart is unavailable because Supabase did not load.");if(!authUser)throw new Error("Please sign in first.");const {error}=await supabaseClient.from("cart_items").delete().eq("user_id",authUser.id).eq("item_key",key);if(error)throw error;}
+async function syncCartToCloud(){if(!supabaseClient||!authUser)throw new Error("Sign in to sync your online bag.");const {error}=await supabaseClient.from("cart_items").delete().eq("user_id",authUser.id);if(error)throw error;for(const item of cart)await saveCloudCartItem(item);}
+async function handleAuthChange(user){
+ authUser=user||null;
+ if(authUser){try{await loadCloudCart();toast("Signed in. Your online bag is ready.");}catch(e){console.error(e);toast("Signed in, but online bag could not load. Check cart_items table and RLS.");}}
+ else{cart=[];write(STORE.cart,cart);renderCart();}
+ renderCustomerModal();
+}
+
 async function loadSupabaseProducts(){
  if(!supabaseClient){
   $("storeMessage").textContent="Supabase library could not load. Showing the existing local preview collection.";
@@ -73,19 +97,29 @@ function renderProducts(){
  $("productGrid").querySelectorAll("[data-wish]").forEach(b=>b.onclick=()=>toggleWishlist(b.dataset.wish));
 }
 function setCategory(category){activeCategory=category;$("filters").querySelectorAll("[data-category]").forEach(b=>b.classList.toggle("active",b.dataset.category===category));renderProducts()}
-function addToCart(id,size="M",color="Black",qty=1){
+async function addToCart(id,size="M",color="Black",qty=1){
  const p=products.find(x=>String(x.id)===String(id));if(!p)return toast("Product is unavailable.");
- const key=cartKey(id,size,color),item=cart.find(x=>x.key===key),next=(item?.qty||0)+Number(qty);
- if(next>Number(p.stock))return toast(`Only ${p.stock} item(s) are available.`);
- if(item)item.qty=next;else cart.push({key,id:p.id,name:p.name,price:Number(p.price),image_url:p.image_url||"",qty:Number(qty),size,color});
- write(STORE.cart,cart);renderCart();toast(`${p.name} added to your bag.`);
+ if(!authUser){openCustomer();toast("Create an account or sign in to save your bag online across devices.");return;}
+ const requestedQty=Number(qty),availableStock=Number(p.stock);if(!Number.isInteger(requestedQty)||requestedQty<1)return toast("Please choose a valid quantity.");
+ const key=cartKey(p.id,size,color),existing=cart.find(x=>x.key===key),next=(Number(existing?.qty)||0)+requestedQty;
+ if(!Number.isFinite(availableStock)||availableStock<1||next>availableStock)return toast(`Only ${availableStock} item(s) are available.`);
+ const item=existing||{key,id:p.id,name:p.name,price:Number(p.price)||0,image_url:p.image_url||"",qty:0,size,color};item.qty=next;item.name=p.name;item.price=Number(p.price)||0;item.image_url=p.image_url||"";
+ try{await saveCloudCartItem(item);if(existing)Object.assign(existing,item);else cart.push(item);write(STORE.cart,cart);renderCart();toast(`${p.name} saved to your online bag.`);}catch(e){console.error(e);toast(`Could not save bag online: ${e.message||"check Supabase cart table"}`);}
 }
+
 function renderCart(){
  $("bagCount").textContent=countCart();$("drawerCount").textContent=`(${countCart()})`;$("bagSubtotal").textContent=money(subtotal());$("checkoutTotal").textContent=money(subtotal());$("checkoutBtn").disabled=!cart.length;
  $("bagItems").innerHTML=cart.length?cart.map(i=>`<div class="bag-item"><img src="${esc(i.image_url)}" alt="${esc(i.name)}"><div class="bag-item-copy"><h4>${esc(i.name)}</h4><p>${money(i.price)}</p><small>Size: ${esc(i.size)} · Color: ${esc(i.color)}</small><div class="qty-controls"><button type="button" data-qty="${esc(i.key)}" data-delta="-1">−</button><span>${i.qty}</span><button type="button" data-qty="${esc(i.key)}" data-delta="1">+</button></div></div><button class="remove-item" type="button" data-remove="${esc(i.key)}">✕</button></div>`).join(""):'<div class="empty-state">Your bag is waiting for something good.</div>';
  $("bagItems").querySelectorAll("img").forEach(img=>img.addEventListener("error",()=>{img.onerror=null;img.src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=300&q=80"}));
- $("bagItems").querySelectorAll("[data-qty]").forEach(b=>b.onclick=()=>{const item=cart.find(x=>x.key===b.dataset.qty);if(!item)return;const n=item.qty+Number(b.dataset.delta);if(n<=0)cart=cart.filter(x=>x.key!==item.key);else if(n>stockFor(item.id))return toast("You have reached the available stock.");else item.qty=n;write(STORE.cart,cart);renderCart()});
- $("bagItems").querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{cart=cart.filter(x=>x.key!==b.dataset.remove);write(STORE.cart,cart);renderCart()});
+ $("bagItems").querySelectorAll("[data-qty]").forEach(b=>b.onclick=()=>{
+  const item=cart.find(x=>x.key===b.dataset.qty);if(!item)return;
+  const delta=Number(b.dataset.delta);if(delta!==1&&delta!==-1)return;
+  const next=(Number(item.qty)||0)+delta;
+  if(!authUser)return toast("Please sign in to update your online bag.");
+  if(next>stockFor(item.id))return toast("You have reached the available stock.");
+  (async()=>{try{if(next<=0){await deleteCloudCartItem(item.key);cart=cart.filter(x=>x.key!==item.key);}else{item.qty=next;await saveCloudCartItem(item);}write(STORE.cart,cart);renderCart();}catch(err){toast("Could not update online bag: "+err.message);try{await loadCloudCart();}catch(_){}}})();
+ });
+ $("bagItems").querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{const key=b.dataset.remove;if(!authUser)return toast("Please sign in first.");(async()=>{try{await deleteCloudCartItem(key);cart=cart.filter(x=>x.key!==key);write(STORE.cart,cart);renderCart()}catch(e){toast("Could not remove item online: "+e.message)}})()});
 }
 function closeAll(){document.querySelectorAll(".modal").forEach(m=>m.classList.add("hidden"));$("bagDrawer").classList.remove("open");$("overlay").classList.add("hidden");document.body.classList.remove("no-scroll");document.querySelector(".main-nav").classList.remove("mobile-nav")}
 function openModal(id){closeAll();$(id).classList.remove("hidden");$("overlay").classList.remove("hidden");document.body.classList.add("no-scroll")}
@@ -104,7 +138,7 @@ function renderWishlist(){
 function openWishlist(){openModal("wishlistModal");renderWishlist()}
 function showProduct(id){
  const p=products.find(x=>String(x.id)===String(id));if(!p)return;
- $("productDetailContent").innerHTML=`<div class="product-detail"><img src="${esc(p.image_url||"")}" alt="${esc(p.name)}"><div><p class="eyebrow">${esc(p.category)}</p><h2>${esc(p.name)}</h2><div class="product-detail-price">${money(p.price)}</div><p class="product-detail-description">${esc(p.description||"A considered NEXURE&LAND essential.")}</p><span class="stock-label">${p.stock} available</span><div class="detail-options"><label>Size<select id="detailSize"><option>S</option><option selected>M</option><option>L</option><option>XL</option><option>XXL</option></select></label><label>Color<select id="detailColor"><option>Black</option><option>White</option><option>Navy</option><option>Beige</option><option>Olive</option></select></label><label>Quantity<select id="detailQty">${Array.from({length:Math.max(1,Math.min(10,Number(p.stock)||1))},(_,i)=>`<option>${i+1}</option>`).join("")}</select></label></div><div class="detail-actions"><button class="button button-dark" id="detailAdd" type="button" ${Number(p.stock)<=0?"disabled":""}>Add to bag</button><button class="button button-outline" id="detailWish" type="button">${wishlist.some(x=>String(x)===String(p.id))?"♥ Saved":"♡ Save"}</button></div><p class="small-note">Options are saved with this browser's demo cart only.</p></div></div>`;
+ $("productDetailContent").innerHTML=`<div class="product-detail"><img src="${esc(p.image_url||"")}" alt="${esc(p.name)}"><div><p class="eyebrow">${esc(p.category)}</p><h2>${esc(p.name)}</h2><div class="product-detail-price">${money(p.price)}</div><p class="product-detail-description">${esc(p.description||"A considered NEXURE&LAND essential.")}</p><span class="stock-label">${p.stock} available</span><div class="detail-options"><label>Size<select id="detailSize"><option>S</option><option selected>M</option><option>L</option><option>XL</option><option>XXL</option></select></label><label>Color<select id="detailColor"><option>Black</option><option>White</option><option>Navy</option><option>Beige</option><option>Olive</option></select></label><label>Quantity<select id="detailQty">${Array.from({length:Math.max(1,Math.min(10,Number(p.stock)||1))},(_,i)=>`<option>${i+1}</option>`).join("")}</select></label></div><div class="detail-actions"><button class="button button-dark" id="detailAdd" type="button" ${Number(p.stock)<=0?"disabled":""}>Add to bag</button><button class="button button-outline" id="detailWish" type="button">${wishlist.some(x=>String(x)===String(p.id))?"♥ Saved":"♡ Save"}</button></div><p class="small-note">Sign in to save your bag securely to your account.</p></div></div>`;
  const img=$("productDetailContent").querySelector("img");img.onerror=()=>{img.onerror=null;img.src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=700&q=80"};
  openModal("productModal");$("detailAdd").onclick=()=>{addToCart(p.id,$("detailSize").value,$("detailColor").value,Number($("detailQty").value));closeAll()};$("detailWish").onclick=()=>{toggleWishlist(p.id);$("detailWish").textContent=wishlist.some(x=>String(x)===String(p.id))?"♥ Saved":"♡ Save"};
 }
@@ -122,9 +156,11 @@ function renderCustomerView(view="orders"){
   host.querySelectorAll("[data-wish-view]").forEach(b=>b.onclick=()=>showProduct(b.dataset.wishView));host.querySelectorAll("[data-wish-remove]").forEach(b=>b.onclick=()=>toggleWishlist(b.dataset.wishRemove));
  }
 }
-function renderCustomerModal(){const c=currentCustomer();$("customerForm").classList.toggle("hidden",!!c);$("customerPanel").classList.toggle("hidden",!c);if(c){$("customerWelcome").textContent=`Hello, ${c.name}`;renderCustomerView("orders")}}
+function renderCustomerModal(){const c=currentCustomer();$("customerForm").classList.toggle("hidden",!!c&&!customerRecoveryMode);$("customerPanel").classList.toggle("hidden",!c||customerRecoveryMode);if(c&&!customerRecoveryMode){$("customerWelcome").textContent=`Hello, ${c.name}`;renderCustomerView("orders")}}
 function openCustomer(){openModal("customerModal");renderCustomerModal()}
-function setCustomerMode(mode){customerMode=mode;document.querySelectorAll("[data-account-tab]").forEach(b=>b.classList.toggle("active",b.dataset.accountTab===mode));$("customerForm").elements.name.closest("label").classList.toggle("hidden",mode!=="signup");$("customerForm").elements.password.autocomplete=mode==="signup"?"new-password":"current-password";$("customerSubmit").textContent=mode==="signup"?"Create demo account":"Sign in (demo)";$("customerMessage").textContent=mode==="signup"?"Demo profile only. Do not reuse a real password; no password is stored.":"Enter the email used for your demo account. No password is stored."}
+function setCustomerMode(mode){customerMode=mode;customerRecoveryMode=false;otpSent=false;document.querySelectorAll("[data-account-tab]").forEach(b=>b.classList.toggle("active",b.dataset.accountTab===mode));const f=$("customerForm");$("customerNameLabel").classList.toggle("hidden",mode!=="signup");$("customerPasswordLabel").classList.remove("hidden");$("customerNewPasswordLabel").classList.add("hidden");$("customerOtpLabel").classList.add("hidden");$("resendSignupOtpBtn").classList.add("hidden");$("forgotPasswordBtn").classList.toggle("hidden",mode!=="signin");f.elements.name.disabled=false;f.elements.email.disabled=false;f.elements.email.required=true;f.elements.password.disabled=false;f.elements.otp.disabled=false;f.elements.otp.value="";f.elements.otp.required=false;f.elements.password.value="";f.elements.name.required=mode==="signup";f.elements.password.autocomplete=mode==="signup"?"new-password":"current-password";$("customerSubmit").textContent=mode==="signup"?"CREATE ACCOUNT":"SIGN IN";$("customerMessage").textContent=mode==="signup"?"Enter your name, email and password. We will send a 6-digit verification code to your email.":"Sign in with your registered email and password."}
+function showPasswordRecovery(){customerRecoveryMode=true;customerMode="recovery";authUser=null;renderCustomerModal();document.querySelectorAll("[data-account-tab]").forEach(b=>b.classList.remove("active"));$("customerNameLabel").classList.add("hidden");$("customerNameLabel").querySelector("input").required=false;$("customerPasswordLabel").classList.add("hidden");$("customerPasswordLabel").querySelector("input").required=false;$("customerOtpLabel").classList.add("hidden");$("customerNewPasswordLabel").classList.remove("hidden");$("customerNewPasswordLabel").querySelector("input").required=true;$("forgotPasswordBtn").classList.add("hidden");$("customerSubmit").textContent="Update password";$("customerMessage").textContent="Choose a new password with at least 8 characters.";openModal("customerModal")}
+
 function adminStats(){$("adminDemoOrders").textContent=orders.length;$("adminDemoProducts").textContent=products.length;$("adminLowStock").textContent=products.filter(p=>Number(p.stock)<=5).length;$("adminDemoCustomers").textContent=customers.length}
 function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");renderAdminView()}
 function renderAdminView(){
@@ -140,15 +176,46 @@ function renderAdminView(){
  }
 }
 function resetProductForm(){const f=$("productForm");f.reset();f.elements.id.value="";$("saveProductBtn").textContent="Add product";$("productFormMessage").textContent=""}
-function editProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;const f=$("productForm");["id","name","price","stock","category","description","image_url"].forEach(k=>{if(f.elements[k])f.elements[k].value=p[k]??""});$("saveProductBtn").textContent="Update product";$("productFormMessage").textContent="Editing a local demo product.";f.scrollIntoView({behavior:"smooth",block:"center"})}
-function deleteProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p||!confirm(`Delete "${p.name}" from this browser's demo catalog?`))return;products=products.filter(x=>String(x.id)!==String(id));wishlist=wishlist.filter(x=>String(x)!==String(id));cart=cart.filter(x=>String(x.id)!==String(id));saveAll();renderProducts();renderCart();renderAdminView();toast("Demo product deleted.")}
+function editProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;const f=$("productForm");["id","name","price","stock","category","description","image_url"].forEach(k=>{if(f.elements[k])f.elements[k].value=p[k]??""});$("saveProductBtn").textContent="Update product";$("productFormMessage").textContent="Editing an online catalogue product.";f.scrollIntoView({behavior:"smooth",block:"center"})}
+async function deleteProduct(id){
+ const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+ if(!supabaseClient||!authUser){toast("Please sign in with the authorised store admin account.");return;}
+ if(String(id).startsWith("demo")||String(id).startsWith("shoe")){toast("This is a preview item, not a saved Supabase product.");return;}
+ if(!confirm(`Delete "${p.name}" from the online catalogue?`))return;
+ try{
+  const {data,error}=await supabaseClient.from("products").delete().eq("id",id).select("id");
+  if(error)throw error;
+  if(!data||!data.length)throw new Error("No product was deleted. Check that this account has admin permission in Supabase RLS.");
+  wishlist=wishlist.filter(x=>String(x)!==String(id));cart=cart.filter(x=>String(x.id)!==String(id));
+  await loadSupabaseProducts();write(STORE.wishlist,wishlist);write(STORE.cart,cart);
+  renderProducts();renderCart();renderWishlist();renderAdminView();toast("Online product deleted.");
+ }catch(err){console.error("Supabase product delete failed:",err);toast("Could not delete online product: "+(err.message||"Check Supabase RLS permissions."));}
+}
 function fileAsDataURL(file){if(!file)return Promise.resolve("");if(!file.type.startsWith("image/"))return Promise.reject(new Error("Choose an image file."));if(file.size>1500000)return Promise.reject(new Error("Image must be smaller than 1.5 MB for this browser preview."));return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Image could not be read."));r.readAsDataURL(file)})}
 async function saveProduct(e){
- e.preventDefault();const f=e.currentTarget,id=f.elements.id.value,old=products.find(p=>String(p.id)===String(id));let image=f.elements.image_url.value.trim()||old?.image_url||"";
- try{if(f.elements.image.files[0])image=await fileAsDataURL(f.elements.image.files[0])}catch(err){$("productFormMessage").textContent=err.message;return}
- const p={id:id||makeId("product"),name:f.elements.name.value.trim(),price:Number(f.elements.price.value),stock:Number(f.elements.stock.value),category:f.elements.category.value,description:f.elements.description.value.trim(),image_url:image||"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85"};
- if(!p.name||p.price<=0||!Number.isInteger(p.stock)||p.stock<0){$("productFormMessage").textContent="Enter a product name, valid price and whole-number stock.";return}
- products=old?products.map(x=>String(x.id)===String(id)?p:x):[p,...products];if(!write(STORE.products,products))return;renderProducts();renderAdminView();resetProductForm();toast(old?"Demo product updated.":"Demo product added.");
+ e.preventDefault();
+ const f=e.currentTarget,id=f.elements.id.value,old=products.find(p=>String(p.id)===String(id));
+ if(!supabaseClient||!authUser){$("productFormMessage").textContent="Please sign in with the authorised store admin account first.";return;}
+ let image=f.elements.image_url.value.trim()||old?.image_url||"";
+ try{if(f.elements.image.files[0])image=await fileAsDataURL(f.elements.image.files[0]);}
+ catch(err){$("productFormMessage").textContent=err.message;return;}
+ const row={name:f.elements.name.value.trim(),price:Number(f.elements.price.value),stock:Number(f.elements.stock.value),category:f.elements.category.value,description:f.elements.description.value.trim(),image_url:image||"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85"};
+ if(!row.name||!Number.isFinite(row.price)||row.price<=0||!Number.isInteger(row.stock)||row.stock<0){$("productFormMessage").textContent="Enter a product name, valid price and whole-number stock.";return;}
+ if(id&&(String(id).startsWith("demo")||String(id).startsWith("shoe"))){$("productFormMessage").textContent="Preview items cannot be edited. Add this item as a new online product instead.";return;}
+ const btn=$("saveProductBtn");btn.disabled=true;
+ try{
+  let result;
+  if(id){result=await supabaseClient.from("products").update(row).eq("id",id).select("*").single();}
+  else{result=await supabaseClient.from("products").insert(row).select("*").single();}
+  if(result.error)throw result.error;
+  if(!result.data)throw new Error("Supabase did not return the saved product. Check the products table and admin RLS policies.");
+  await loadSupabaseProducts();
+  renderProducts();renderAdminView();resetProductForm();
+  toast(id?"Online product updated.":"Online product added.");
+ }catch(err){
+  console.error("Supabase product save failed:",err);
+  $("productFormMessage").textContent="Could not save online product: "+(err.message||"Check Supabase RLS permissions.");
+ }finally{btn.disabled=false;}
 }
 function checkout(e){
  e.preventDefault();if(!cart.length)return toast("Your bag is empty.");const f=e.currentTarget,c=currentCustomer();
@@ -161,9 +228,15 @@ function checkout(e){
 }
 function resetCheckout(){$("checkoutForm").classList.remove("hidden");$("checkoutResult").classList.add("hidden");$("checkoutResult").textContent="";$("checkoutModal").querySelector("h2").textContent="Checkout"}
 async function setup(){
+ // Bind account tabs immediately, before any network request can delay setup.
+ document.querySelectorAll("[data-account-tab]").forEach(b=>{b.type="button";b.onclick=()=>setCustomerMode(b.dataset.accountTab)});
  $("year").textContent=new Date().getFullYear();$("storeMessage").textContent="Connecting to the NEXURE&LAND catalogue…";
  await loadSupabaseProducts();
- $("bagBtn").onclick=openBag;$("wishlistBtn").onclick=openWishlist;$("checkoutBtn").onclick=()=>{if(!cart.length)return toast("Add a product to your bag first.");closeAll();resetCheckout();$("checkoutTotal").textContent=money(subtotal());$("checkoutModal").classList.remove("hidden");$("overlay").classList.remove("hidden");document.body.classList.add("no-scroll")};
+ if(!supabaseClient){$("storeMessage").textContent="Supabase library unavailable. Online account and bag are disabled.";}else{
+  supabaseClient.auth.onAuthStateChange((event,session)=>{setTimeout(()=>{if(event==="PASSWORD_RECOVERY"){showPasswordRecovery();return;}handleAuthChange(session?.user||null);},0)});
+  try{const {data:{session},error}=await supabaseClient.auth.getSession();if(error)throw error;await handleAuthChange(session?.user||null);}catch(e){console.error(e);toast("Could not restore your account session.");}
+ }
+ $("bagBtn").onclick=openBag;$("wishlistBtn").onclick=openWishlist;$("checkoutBtn").onclick=()=>{if(!authUser){openCustomer();return toast("Sign in to continue with your online bag.");}if(!cart.length)return toast("Add a product to your bag first.");closeAll();resetCheckout();$("checkoutTotal").textContent=money(subtotal());$("checkoutModal").classList.remove("hidden");$("overlay").classList.remove("hidden");document.body.classList.add("no-scroll")};
  $("searchToggle").onclick=()=>{$("searchPanel").classList.toggle("hidden");if(!$("searchPanel").classList.contains("hidden"))$("searchInput").focus()};
  $("searchClose").onclick=()=>{$("searchPanel").classList.add("hidden");$("searchInput").value="";searchTerm="";renderProducts()};
  $("searchInput").oninput=e=>{searchTerm=e.target.value;renderProducts()};$("sortSelect").onchange=renderProducts;
@@ -176,15 +249,49 @@ async function setup(){
  $("accountBtn").onclick=openCustomer;
  document.querySelectorAll("[data-account-tab]").forEach(b=>b.onclick=()=>setCustomerMode(b.dataset.accountTab));
  document.querySelectorAll("[data-customer-view]").forEach(b=>b.onclick=()=>{document.querySelectorAll("[data-customer-view]").forEach(x=>x.classList.toggle("active",x===b));renderCustomerView(b.dataset.customerView)});
- $("customerForm").onsubmit=e=>{
-  e.preventDefault();const f=e.currentTarget,email=f.elements.email.value.trim().toLowerCase(),pass=f.elements.password.value;
-  if(pass.length<8){$("customerMessage").textContent="Use at least 8 characters for this demo form.";return}
-  let c=customers.find(x=>x.email.toLowerCase()===email);
-  if(customerMode==="signup"){if(c){$("customerMessage").textContent="This email already has a demo account. Please sign in.";return}c={name:f.elements.name.value.trim(),email,phone:""};customers.push(c);write(STORE.customers,customers)}
-  else if(!c){$("customerMessage").textContent="No demo account found. Choose Create account first.";return}
-  currentCustomerEmail=email;sessionStorage.setItem(STORE.session,email);f.reset();renderCustomerModal();toast(`Welcome, ${c.name}.`);
+ $("customerForm").onsubmit=async e=>{
+  e.preventDefault();const f=e.currentTarget,email=f.elements.email.value.trim().toLowerCase();
+  if(!supabaseClient){$("customerMessage").textContent="Supabase could not load. Please refresh and try again.";return;}
+  const btn=$("customerSubmit"),originalText=customerRecoveryMode?"Update password":(customerMode==="signup"?"CREATE ACCOUNT":"SIGN IN");btn.disabled=true;
+  try{
+   if(customerRecoveryMode){
+    const password=f.elements.newPassword.value;if(password.length<8)throw new Error("Password must be at least 8 characters.");
+    const {error}=await supabaseClient.auth.updateUser({password});if(error)throw error;
+    customerRecoveryMode=false;f.reset();await handleAuthChange((await supabaseClient.auth.getUser()).data.user);
+    $("customerMessage").textContent="Your password has been updated successfully.";toast("Password updated.");
+   }else if(customerMode==="signin"){
+    const password=f.elements.password.value;if(!password)throw new Error("Enter your password.");
+    const {data,error}=await supabaseClient.auth.signInWithPassword({email,password});if(error)throw error;
+    f.reset();await handleAuthChange(data.user);toast("You are signed in.");
+   }else if(customerMode==="signup"&&otpSent){
+    const token=f.elements.otp.value.trim();
+    if(!/^\d{6}$/.test(token))throw new Error("Enter the 6-digit code sent to your email.");
+    const {data,error}=await supabaseClient.auth.verifyOtp({email,token,type:"signup"});if(error)throw error;
+    f.reset();otpSent=false;$("resendSignupOtpBtn").classList.add("hidden");await handleAuthChange(data.user);$("customerMessage").textContent="Email verified. Your NEXURE&LAND account is ready.";toast("Account verified successfully.");
+   }else{
+    const name=f.elements.name.value.trim(),password=f.elements.password.value;
+    if(!name)throw new Error("Enter your full name.");if(password.length<8)throw new Error("Password must be at least 8 characters.");
+    const {data,error}=await supabaseClient.auth.signUp({email,password,options:{data:{full_name:name}}});if(error)throw error;
+    if(data.session&&data.user){
+     await supabaseClient.auth.signOut({scope:"local"});
+     throw new Error("Email OTP is not enabled in the Supabase project. Turn ON Confirm email in Supabase Authentication settings, then test signup with a new email address.");
+    }
+    if(!data.user)throw new Error("Supabase did not create the account. Please try again.");
+    otpSent=true;f.elements.name.disabled=true;f.elements.email.disabled=true;f.elements.password.disabled=true;f.elements.otp.disabled=false;f.elements.otp.required=true;$("customerOtpLabel").classList.remove("hidden");$("resendSignupOtpBtn").classList.remove("hidden");$("customerSubmit").textContent="VERIFY EMAIL CODE";$("customerMessage").textContent="A 6-digit verification code has been sent to "+email+". Enter it below to finish creating your account.";f.elements.otp.focus();$("customerOtpLabel").scrollIntoView({behavior:"smooth",block:"nearest"});toast("Email verification code sent.");
+   }
+  }catch(err){
+   console.error("Customer authentication error:",err);let msg=err.message||"Authentication failed. Please try again.";
+   if(/user already registered/i.test(msg))msg="An account with this email already exists. Choose SIGN IN instead.";
+   if(/email not confirmed/i.test(msg)){$("forgotPasswordBtn").classList.remove("hidden");msg="Please confirm your email using the link we sent, then sign in.";}
+   $("customerMessage").textContent=msg;
+   if(customerMode==="signin"&&/invalid login credentials|invalid credentials|email not confirmed/i.test(err.message||""))$("forgotPasswordBtn").classList.remove("hidden");
+  }finally{btn.disabled=false;btn.textContent=(customerMode==="signup"&&otpSent)?"VERIFY EMAIL CODE":originalText;}
  };
- $("customerSignOut").onclick=()=>{currentCustomerEmail="";sessionStorage.removeItem(STORE.session);renderCustomerModal();setCustomerMode("signin");toast("Signed out of demo account.")};
+ $("customerForm").elements.otp.addEventListener("input",e=>{e.target.value=e.target.value.replace(/\D/g,"").slice(0,6);});
+ $("resendSignupOtpBtn").onclick=async()=>{const email=$("customerForm").elements.email.value.trim().toLowerCase();if(!email)return;const b=$("resendSignupOtpBtn");b.disabled=true;try{const {error}=await supabaseClient.auth.resend({type:"signup",email});if(error)throw error;$("customerMessage").textContent="A new 6-digit code has been sent to "+email+".";toast("New verification code sent.");}catch(e){$("customerMessage").textContent=e.message||"Could not resend the code. Please wait and try again.";}finally{b.disabled=false;}};
+ $("forgotPasswordBtn").onclick=async()=>{const email=$("customerForm").elements.email.value.trim().toLowerCase();if(!email){$("customerMessage").textContent="Enter your email address first.";return;}try{const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;$("customerMessage").textContent="Password reset link sent to "+email+". Open the email link to choose a new password.";toast("Password reset email sent.");}catch(e){$("customerMessage").textContent=e.message||"Could not send password reset email.";}};
+ $("customerSignOut").onclick=async()=>{try{const {error}=await supabaseClient.auth.signOut();if(error)throw error;authUser=null;cart=[];write(STORE.cart,cart);renderCart();renderCustomerModal();setCustomerMode("signin");toast("You have signed out.");}catch(e){toast("Sign out failed: "+e.message);}};
+
  $("adminFooter").onclick=e=>{e.preventDefault();setAdminView("products");openModal("adminModal")};
  document.querySelectorAll("[data-admin-view]").forEach(b=>b.onclick=()=>setAdminView(b.dataset.adminView));
  $("productForm").onsubmit=saveProduct;$("resetProductBtn").onclick=resetProductForm;
