@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="customer-dashboard.css">
 </head>
 <body id="top">
   <div class="announcement">NEXURE&LAND — Modern essentials, made to move.</div>
@@ -63,7 +64,6 @@
 
     <section class="ticker"><span>MODERN FITS</span><span>✳</span><span>EVERYDAY LUXURY</span><span>✳</span><span>MADE FOR MOVEMENT</span><span>✳</span><span>MODERN FITS</span></section>
 
-
     <section class="fabric-story section" aria-label="The NEXURE and LAND fabric story">
       <div class="fabric-heading">
         <p class="eyebrow">THE DETAILS MAKE THE DIFFERENCE</p>
@@ -110,7 +110,6 @@
       <div class="editorial-copy"><p class="eyebrow">THE MEN'S STYLE APPROACH</p><h2>Men's essentials.<br><em>Better style.</em></h2><p>Men's shirts, tees, trousers, and everyday essentials with modern fits and considered details.</p><a href="#shop" class="text-link">Discover N&L ↗</a></div>
     </section>
 
-
     <section class="faq-section section" id="faq">
       <div class="section-heading"><div><p class="eyebrow">HERE TO HELP</p><h2>Frequently asked <em>questions.</em></h2></div><p class="section-subtitle">Everything you need to know before your next favourite piece.</p></div>
       <div class="faq-layout">
@@ -138,7 +137,6 @@
 </div>
 </footer>
 
-  <!-- Shopping bag drawer -->
   <div class="overlay hidden" id="overlay"></div>
   <aside class="drawer" id="bagDrawer" aria-label="Shopping bag">
     <div class="drawer-head"><div><p class="eyebrow">YOUR SELECTION</p><h3>Shopping bag <span id="drawerCount">(0)</span></h3></div><button class="icon-btn" data-close>✕</button></div>
@@ -146,7 +144,6 @@
     <div class="bag-footer"><div class="subtotal"><span>Subtotal</span><strong id="bagSubtotal">Rs. 0</strong></div><p class="small-note">Delivery charges are calculated at checkout.</p><button class="button button-dark full" id="checkoutBtn">Continue to checkout ↗</button></div>
   </aside>
 
-  <!-- Checkout modal -->
   <div class="modal hidden" id="checkoutModal">
     <div class="modal-card"><button class="modal-close icon-btn" data-close>✕</button><p class="eyebrow">ALMOST YOURS</p><h2>Checkout</h2>
       <form id="checkoutForm" class="form-grid">
@@ -162,7 +159,6 @@
     </div>
   </div>
 
-  <!-- Admin workspace: local frontend preview only; secure admin access comes with Supabase later -->
   <div class="modal hidden" id="adminModal">
     <div class="modal-card admin-card workspace-card">
       <button class="modal-close icon-btn" data-close aria-label="Close admin dashboard">✕</button>
@@ -200,7 +196,6 @@
     </div>
   </div>
 
-  <!-- Customer account: email/password sign-in, email OTP signup verification and password recovery -->
   <div class="modal hidden" id="customerModal">
     <div class="modal-card customer-card">
       <button class="modal-close icon-btn" data-close aria-label="Close">✕</button>
@@ -225,7 +220,6 @@
     </div>
   </div>
 
-  <!-- Product details -->
   <div class="modal hidden" id="productModal">
     <div class="modal-card product-detail-card">
       <button class="modal-close icon-btn" data-close aria-label="Close">✕</button>
@@ -233,7 +227,6 @@
     </div>
   </div>
 
-  <!-- Wishlist modal -->
   <div class="modal hidden" id="wishlistModal">
     <div class="modal-card wishlist-modal-card">
       <button class="modal-close icon-btn" data-close aria-label="Close wishlist">✕</button>
@@ -245,6 +238,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js" defer></script>
+  <script src="customer-dashboard.js" defer></script>
 
 <section class="trust-pages" id="store-info">
   <section id="about-store">
