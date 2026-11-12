@@ -162,13 +162,13 @@
     </div>
   </div>
 
-  <!-- Admin workspace: protected by Supabase app_metadata role and database RLS -->
+  <!-- Admin workspace: local frontend preview only; secure admin access comes with Supabase later -->
   <div class="modal hidden" id="adminModal">
     <div class="modal-card admin-card workspace-card">
       <button class="modal-close icon-btn" data-close aria-label="Close admin dashboard">✕</button>
-      <p class="eyebrow">N&L MANAGEMENT · SECURE ADMIN</p>
+      <p class="eyebrow">N&L MANAGEMENT · ADMIN</p>
       <h2>Store dashboard</h2>
-      <p class="preview-notice">Admin access is restricted to authorised store administrators. Products, orders and customer profiles are loaded from the NEXURE&LAND database.</p>
+      <p class="preview-notice">Admin access is checked against your Supabase profiles table. Orders and order status are stored in the database.</p>
       <div class="admin-stats">
         <article><span>Orders</span><strong id="adminDemoOrders">0</strong></article>
         <article><span>Products</span><strong id="adminDemoProducts">0</strong></article>

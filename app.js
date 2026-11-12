@@ -23,21 +23,8 @@ function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt
 function money(v){return new Intl.NumberFormat("en-PK",{style:"currency",currency:"PKR",maximumFractionDigits:0}).format(Number(v)||0)}
 function makeId(prefix="nl"){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`}
 let products=read(STORE.products,null)||seedProducts,cart=read(STORE.cart,[]),wishlist=read(STORE.wishlist,[]),orders=read(STORE.orders,[]),customers=read(STORE.customers,[]);
-let authUser=null, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false;
+let authUser=null, storeAdmin=false, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false;
 function toast(message){let el=$("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast-message";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600)}
-function isStoreAdmin(){return Boolean(authUser&&authUser.app_metadata&&authUser.app_metadata.role==="admin")}
-async function loadAdminData(){
- if(!isStoreAdmin())throw new Error("This account does not have store admin permission.");
- const [orderResult,profileResult]=await Promise.all([
-  supabaseClient.from("store_orders").select("*").order("created_at",{ascending:false}),
-  supabaseClient.from("profiles").select("id,email,full_name,phone,created_at").order("created_at",{ascending:false})
- ]);
- if(orderResult.error)throw orderResult.error;
- if(profileResult.error)throw profileResult.error;
- orders=(orderResult.data||[]).map(o=>({id:o.order_number,dbId:o.id,userId:o.user_id,customerName:o.customer_name,customerEmail:o.customer_email,phone:o.phone,address:o.address,city:o.city,payment:o.payment_method,items:o.items||[],total:Number(o.total)||0,status:o.status,createdAt:o.created_at}));
- customers=(profileResult.data||[]).map(c=>({id:c.id,name:c.full_name||"Customer",email:c.email||"",phone:c.phone||""}));
- renderAdminView();
-}
 function currentCustomer(){return authUser?{name:authUser.user_metadata?.full_name||authUser.email?.split("@")[0]||"Customer",email:authUser.email||"",phone:authUser.user_metadata?.phone||""}:null}
 function saveAll(){write(STORE.products,products);write(STORE.cart,cart);write(STORE.wishlist,wishlist);write(STORE.orders,orders);write(STORE.customers,customers)}
 function countCart(){return cart.reduce((s,i)=>s+Number(i.qty||0),0)}
@@ -64,10 +51,20 @@ async function saveCloudCartItem(item){
 }
 async function deleteCloudCartItem(key){if(!supabaseClient)throw new Error("Online cart is unavailable because Supabase did not load.");if(!authUser)throw new Error("Please sign in first.");const {error}=await supabaseClient.from("cart_items").delete().eq("user_id",authUser.id).eq("item_key",key);if(error)throw error;}
 async function syncCartToCloud(){if(!supabaseClient||!authUser)throw new Error("Sign in to sync your online bag.");const {error}=await supabaseClient.from("cart_items").delete().eq("user_id",authUser.id);if(error)throw error;for(const item of cart)await saveCloudCartItem(item);}
+async function loadStoreAdminRole(){
+ storeAdmin=false;
+ if(!authUser||!supabaseClient)return false;
+ const {data,error}=await supabaseClient.from("profiles").select("role").eq("id",authUser.id).maybeSingle();
+ if(error){console.warn("Admin role lookup:",error.message);return false;}
+ storeAdmin=data?.role==="admin";
+ return storeAdmin;
+}
 async function handleAuthChange(user){
- authUser=user||null;
- if(authUser){try{await loadCloudCart();toast("Signed in. Your online bag is ready.");}catch(e){console.error(e);toast("Signed in, but online bag could not load. Check cart_items table and RLS.");}}
- else{cart=[];write(STORE.cart,cart);renderCart();}
+ authUser=user||null;storeAdmin=false;
+ if(authUser){
+  try{await Promise.all([loadCloudCart(),loadStoreAdminRole()]);toast("Signed in. Your online bag is ready.");}
+  catch(e){console.error(e);toast("Signed in, but some account data could not load. Check Supabase permissions.");}
+ }else{cart=[];write(STORE.cart,cart);renderCart();}
  renderCustomerModal();
 }
 
@@ -155,14 +152,20 @@ function showProduct(id){
  const img=$("productDetailContent").querySelector("img");img.onerror=()=>{img.onerror=null;img.src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=700&q=80"};
  openModal("productModal");$("detailAdd").onclick=()=>{addToCart(p.id,$("detailSize").value,$("detailColor").value,Number($("detailQty").value));closeAll()};$("detailWish").onclick=()=>{toggleWishlist(p.id);$("detailWish").textContent=wishlist.some(x=>String(x)===String(p.id))?"♥ Saved":"♡ Save"};
 }
-function renderCustomerView(view="orders"){
+async function renderCustomerView(view="orders"){
  const host=$("customerView"),c=currentCustomer();if(!host)return;
  if(view==="orders"){
-  host.innerHTML='<p class="small-note">Loading your orders…</p>';
-  (async()=>{try{const {data,error}=await supabaseClient.from("store_orders").select("*").eq("user_id",authUser.id).order("created_at",{ascending:false});if(error)throw error;const mine=data||[];host.innerHTML=mine.length?mine.map(o=>`<article class="customer-view-card"><div class="order-preview-row"><strong>${esc(o.order_number)}</strong><span class="order-status">${esc(o.status)}</span></div><p class="small-note">${new Date(o.created_at).toLocaleString()} · ${money(o.total)}</p><p>${(o.items||[]).map(i=>`${esc(i.name)} × ${i.qty} · ${esc(i.size)} / ${esc(i.color)}`).join("<br>")}</p></article>`).join(""):'<div class="account-empty">You have not placed an order yet.</div>';}catch(err){console.error(err);host.innerHTML='<p class="small-note">Your order history could not load. Please try again later.</p>';}})();
+  if(!authUser){host.innerHTML='<div class="account-empty">Please sign in to view your orders.</div>';return;}
+  host.innerHTML='<div class="account-empty">Loading your orders…</div>';
+  try{
+   const {data:rows,error}=await supabaseClient.from("orders").select("*").eq("user_id",authUser.id).order("created_at",{ascending:false});if(error)throw error;
+   const ids=(rows||[]).map(o=>o.id);let items=[];
+   if(ids.length){const r=await supabaseClient.from("order_items").select("*").in("order_id",ids);if(r.error)throw r.error;items=r.data||[];}
+   host.innerHTML=rows?.length?rows.map(o=>{const oi=items.filter(i=>i.order_id===o.id);return `<article class="customer-view-card"><div class="order-preview-row"><strong>${esc(o.order_number||o.id)}</strong><span class="order-status">${esc(o.status||"pending")}</span></div><p class="small-note">${new Date(o.created_at).toLocaleString()} · ${money(o.total_amount)}</p><p>${oi.map(i=>`${esc(i.product_name)} × ${i.quantity} · ${esc(i.size||"-")} / ${esc(i.color||"-")}`).join("<br>")}</p></article>`}).join(""):'<div class="account-empty">No orders yet. Your confirmed orders will appear here.</div>';
+  }catch(err){console.error(err);host.innerHTML=`<div class="account-empty">Could not load order history: ${esc(err.message||"Please try again.")}</div>`;}
  }else if(view==="profile"){
   host.innerHTML=`<form id="profileForm" class="form-grid customer-view-card"><label class="span-2">Full name<input name="name" value="${esc(c?.name||"")}" required></label><label class="span-2">Email<input value="${esc(c?.email||"")}" disabled></label><label class="span-2">Phone<input name="phone" value="${esc(c?.phone||"")}" placeholder="03XX-XXXXXXX"></label><button class="button button-dark span-2" type="submit">Save demo profile</button></form><p class="small-note">Profile is stored in this browser only.</p>`;
-  $("profileForm").onsubmit=e=>{e.preventDefault();const customer=currentCustomer();customer.name=e.currentTarget.elements.name.value.trim();customer.phone=e.currentTarget.elements.phone.value.trim();write(STORE.customers,customers);$("customerWelcome").textContent=`Hello, ${customer.name}`;toast("Demo profile updated.")};
+  $("profileForm").onsubmit=e=>{e.preventDefault();toast("Profile editing will be connected in a later update.")};
  }else{
   const saved=products.filter(p=>wishlist.some(id=>String(id)===String(p.id)));
   host.innerHTML=saved.length?saved.map(p=>`<div class="inventory-preview-row"><span>${esc(p.name)} · ${money(p.price)}</span><div><button class="button button-outline" data-wish-view="${esc(p.id)}">View</button> <button class="button button-outline" data-wish-remove="${esc(p.id)}">Remove</button></div></div>`).join(""):'<div class="wishlist-empty">Your wishlist is empty. Save products you love.</div>';
@@ -176,29 +179,29 @@ function showPasswordRecovery(){customerRecoveryMode=true;customerMode="recovery
 
 function adminStats(){$("adminDemoOrders").textContent=orders.length;$("adminDemoProducts").textContent=products.length;$("adminLowStock").textContent=products.filter(p=>Number(p.stock)<=5).length;$("adminDemoCustomers").textContent=customers.length}
 function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");renderAdminView()}
-function renderAdminView(){
+async function renderAdminView(){
  adminStats();
+ if(!storeAdmin){if(adminView==="orders")$("adminOrdersList").innerHTML='<div class="account-empty">Admin access is not enabled for this account. Set profiles.role to admin in Supabase.</div>';return;}
  if(adminView==="products"){
   $("adminProductList").innerHTML=products.map(p=>`<div class="admin-row"><div><strong>${esc(p.name)}</strong><div class="small-note">${money(p.price)} · ${esc(p.category)} · Stock ${p.stock}</div></div><div class="admin-row-actions"><button class="button button-outline" type="button" data-edit="${esc(p.id)}">Edit</button><button class="button button-outline" type="button" data-delete="${esc(p.id)}">Delete</button></div></div>`).join("")||'<p class="small-note">No products yet. Add one above.</p>';
   $("adminProductList").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editProduct(b.dataset.edit));$("adminProductList").querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteProduct(b.dataset.delete));
  }else if(adminView==="orders"){
-  $("adminOrdersList").innerHTML=orders.length?orders.slice().reverse().map(o=>`<article class="admin-view-card"><div class="order-preview-row"><strong>${esc(o.id)}</strong><span class="order-status">${esc(o.status)}</span></div><p class="small-note">${esc(o.customerName)} · ${esc(o.customerEmail)} · ${money(o.total)}</p><p class="small-note">${esc(o.phone)} · ${esc(o.city)}</p><p>${o.items.map(i=>`${esc(i.name)} × ${i.qty} (${esc(i.size)}, ${esc(i.color)})`).join("<br>")}</p><label class="admin-status-label">Update status<select data-status="${esc(o.id)}">${["Pending","Confirmed","Processing","Shipped","Delivered","Cancelled"].map(s=>`<option ${o.status===s?"selected":""}>${s}</option>`).join("")}</select></label></article>`).join(""):'<div class="account-empty">No orders found in the online store.</div>';
-  $("adminOrdersList").querySelectorAll("[data-status]").forEach(s=>s.onchange=async()=>{
-   if(!isStoreAdmin())return toast("Admin permission is required.");
-   const o=orders.find(x=>x.id===s.dataset.status);if(!o)return;
-   s.disabled=true;
-   try{const {data,error}=await supabaseClient.from("store_orders").update({status:s.value}).eq("id",o.dbId).select("id,status").single();if(error)throw error;if(!data)throw new Error("Order status was not updated.");o.status=data.status;renderAdminView();toast("Online order status updated.");}
-   catch(err){console.error(err);s.value=o.status;s.disabled=false;toast("Could not update order: "+(err.message||"Check admin permission."));}
-  });
+  $("adminOrdersList").innerHTML='<div class="account-empty">Loading orders…</div>';
+  try{
+   const {data:rows,error}=await supabaseClient.from("orders").select("*").order("created_at",{ascending:false});if(error)throw error;
+   const ids=(rows||[]).map(o=>o.id);let items=[];if(ids.length){const r=await supabaseClient.from("order_items").select("*").in("order_id",ids);if(r.error)throw r.error;items=r.data||[];}
+   $("adminOrdersList").innerHTML=rows?.length?rows.map(o=>{const oi=items.filter(i=>i.order_id===o.id);const status=String(o.status||"pending").toLowerCase();return `<article class="admin-view-card"><div class="order-preview-row"><strong>${esc(o.order_number||o.id)}</strong><span class="order-status">${esc(status)}</span></div><p class="small-note">${esc(o.customer_name||"")} · ${esc(o.customer_email||"")} · ${money(o.total_amount)}</p><p class="small-note">${esc(o.phone||"")} · ${esc(o.city||"")} · ${esc(o.shipping_address||"")} · ${esc(o.payment_method||"")}</p><p>${oi.map(i=>`${esc(i.product_name)} × ${i.quantity} (${esc(i.size||"-")}, ${esc(i.color||"-")})`).join("<br>")}</p><label class="admin-status-label">Update status<select data-status="${esc(o.id)}">${["pending","confirmed","processing","shipped","delivered","cancelled"].map(v=>`<option value="${v}" ${status===v?"selected":""}>${v.charAt(0).toUpperCase()+v.slice(1)}</option>`).join("")}</select></label></article>`}).join(""):'<div class="account-empty">No orders yet.</div>';
+   $("adminOrdersList").querySelectorAll("[data-status]").forEach(sel=>sel.onchange=async()=>{sel.disabled=true;try{const {error}=await supabaseClient.from("orders").update({status:sel.value}).eq("id",sel.dataset.status);if(error)throw error;toast("Order status updated.");}catch(e){toast("Could not update order: "+e.message);await renderAdminView();}finally{sel.disabled=false;}});
+  }catch(err){console.error(err);$("adminOrdersList").innerHTML=`<div class="account-empty">Could not load orders: ${esc(err.message||"Check admin RLS policy.")}</div>`;}
  }else{
-  $("adminCustomersList").innerHTML=customers.length?customers.map(c=>`<article class="admin-view-card"><strong>${esc(c.name)}</strong><p class="small-note">${esc(c.email)} · ${esc(c.phone||"No phone")}</p><p class="small-note">${orders.filter(o=>o.customerEmail===c.email).length} demo order(s)</p></article>`).join(""):'<div class="account-empty">No customer profiles found.</div>';
+  $("adminCustomersList").innerHTML='<div class="account-empty">Customer management is not connected yet.</div>';
  }
 }
 function resetProductForm(){const f=$("productForm");f.reset();f.elements.id.value="";$("saveProductBtn").textContent="Add product";$("productFormMessage").textContent=""}
 function editProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;const f=$("productForm");["id","name","price","stock","category","description","image_url"].forEach(k=>{if(f.elements[k])f.elements[k].value=p[k]??""});$("saveProductBtn").textContent="Update product";$("productFormMessage").textContent="Editing an online catalogue product.";f.scrollIntoView({behavior:"smooth",block:"center"})}
 async function deleteProduct(id){
  const p=products.find(x=>String(x.id)===String(id));if(!p)return;
- if(!supabaseClient||!isStoreAdmin()){toast("Admin permission is required to change products.");return;}
+ if(!supabaseClient||!authUser){toast("Please sign in with the authorised store admin account.");return;}
  if(String(id).startsWith("demo")||String(id).startsWith("shoe")){toast("This is a preview item, not a saved Supabase product.");return;}
  if(!confirm(`Delete "${p.name}" from the online catalogue?`))return;
  try{
@@ -210,22 +213,11 @@ async function deleteProduct(id){
   renderProducts();renderCart();renderWishlist();renderAdminView();toast("Online product deleted.");
  }catch(err){console.error("Supabase product delete failed:",err);toast("Could not delete online product: "+(err.message||"Check Supabase RLS permissions."));}
 }
-async function uploadProductImage(file){
- if(!file)return "";
- if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Choose a JPG, PNG or WebP image.");
- if(file.size>5*1024*1024)throw new Error("Product image must be 5 MB or smaller.");
- const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
- const path=`${Date.now()}-${makeId("product")}.${ext}`;
- const {error}=await supabaseClient.storage.from("product-images").upload(path,file,{contentType:file.type,upsert:false});
- if(error)throw error;
- const {data}=supabaseClient.storage.from("product-images").getPublicUrl(path);
- if(!data?.publicUrl)throw new Error("Could not create a public product image URL.");
- return data.publicUrl;
-}
+function fileAsDataURL(file){if(!file)return Promise.resolve("");if(!file.type.startsWith("image/"))return Promise.reject(new Error("Choose an image file."));if(file.size>1500000)return Promise.reject(new Error("Image must be smaller than 1.5 MB for this browser preview."));return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error("Image could not be read."));r.readAsDataURL(file)})}
 async function saveProduct(e){
  e.preventDefault();
  const f=e.currentTarget,id=f.elements.id.value,old=products.find(p=>String(p.id)===String(id));
- if(!supabaseClient||!isStoreAdmin()){$("productFormMessage").textContent="Sign in with the authorised store admin account first.";return;}
+ if(!supabaseClient||!authUser){$("productFormMessage").textContent="Please sign in with the authorised store admin account first.";return;}
  let image=f.elements.image_url.value.trim()||old?.image_url||"";
  try{if(f.elements.image.files[0])image=await fileAsDataURL(f.elements.image.files[0]);}
  catch(err){$("productFormMessage").textContent=err.message;return;}
@@ -248,37 +240,21 @@ async function saveProduct(e){
  }finally{btn.disabled=false;}
 }
 async function checkout(e){
- e.preventDefault();
- if(!cart.length)return toast("Your bag is empty.");
- if(!supabaseClient||!authUser)return toast("Please sign in before placing an order.");
- const f=e.currentTarget,orderNumber=`NL-${Date.now().toString().slice(-7)}`;
- const paymentLabels={cod:"Cash on Delivery",easypaisa:"EasyPaisa (manual payment)",jazzcash:"JazzCash (manual payment)"};
- const payload={
-  order_number:orderNumber,user_id:authUser.id,
-  customer_name:f.elements.name.value.trim(),
-  customer_email:f.elements.email.value.trim().toLowerCase(),
-  phone:f.elements.phone.value.trim(),address:f.elements.address.value.trim(),
-  city:f.elements.city.value.trim(),payment_method:paymentLabels[f.elements.payment.value]||"Cash on Delivery",
-  items:cart.map(i=>({id:i.id,qty:i.qty,size:i.size,color:i.color})),
-  total:0,status:"Pending"
- };
- const btn=f.querySelector('button[type="submit"]');btn.disabled=true;
+ e.preventDefault();if(!cart.length)return toast("Your bag is empty.");if(!authUser)return toast("Please sign in before checkout.");
+ const f=e.currentTarget,btn=f.querySelector('[type="submit"]');
+ const p_phone=f.elements.phone.value.trim(),p_shipping_address=f.elements.address.value.trim(),p_city=f.elements.city.value.trim(),p_payment_method=f.elements.payment.value;
+ const p_items=cart.map(i=>({id:String(i.id),qty:Number(i.qty),size:i.size||"M",color:i.color||"Black"}));
+ if(p_items.some(i=>! /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(i.id)))return toast("Your bag contains preview products. Add products saved in the online catalogue before checkout.");
+ btn.disabled=true;btn.textContent="Placing order…";
  try{
-  const {data,error}=await supabaseClient.from("store_orders").insert(payload).select("id,order_number,total,status,created_at").single();
-  if(error)throw error;
-  if(!data)throw new Error("The database did not confirm the order.");
-  cart=[];write(STORE.cart,cart);
-  try{await syncCartToCloud();}catch(cartErr){console.warn("Order saved, but cloud cart cleanup needs a retry:",cartErr);}
-  await loadSupabaseProducts();
-  renderCart();renderProducts();renderWishlist();
-  $("checkoutResult").classList.remove("hidden");
-  $("checkoutResult").innerHTML=`<strong>Thank you. Your order ${esc(data.order_number)} has been received.</strong><br>Total: ${money(data.total)}. Our team will contact you to confirm delivery and payment details.`;
-  $("checkoutForm").classList.add("hidden");$("checkoutModal").querySelector("h2").textContent="Order received";
-  toast("Your order has been saved to NEXURE&LAND.");
- }catch(err){
-  console.error("Order submission failed:",err);
-  toast("Order could not be placed: "+(err.message||"Please check your details and try again."));
- }finally{btn.disabled=false;}
+  const {data,error}=await supabaseClient.rpc("place_store_order",{p_phone,p_shipping_address,p_city,p_payment_method,p_items});if(error)throw error;
+  if(!data||!data.id)throw new Error("The database did not confirm the order. Please contact the store admin before trying again.");
+  cart=[];write(STORE.cart,cart);await syncCartToCloud();renderCart();await loadSupabaseProducts();renderProducts();
+  $("checkoutResult").classList.remove("hidden");$("checkoutResult").innerHTML=`<strong>Your order ${esc(data.order_number||data.id)} has been placed successfully.</strong><br>Total: ${money(data.total)}<br>Payment method: ${esc(p_payment_method.toUpperCase())}. The store team will confirm the next steps.`;
+  f.classList.add("hidden");$("checkoutModal").querySelector("h2").textContent="Order placed";toast("Your order has been placed.");
+  await renderCustomerView("orders");
+ }catch(err){console.error("Checkout failed:",err);toast("Order could not be placed: "+(err.message||"Please try again."));}
+ finally{btn.disabled=false;btn.textContent="Place order ↗";}
 }
 function resetCheckout(){$("checkoutForm").classList.remove("hidden");$("checkoutResult").classList.add("hidden");$("checkoutResult").textContent="";$("checkoutModal").querySelector("h2").textContent="Checkout"}
 async function setup(){
@@ -345,15 +321,8 @@ async function setup(){
  $("resendSignupOtpBtn").onclick=async()=>{const email=$("customerForm").elements.email.value.trim().toLowerCase();if(!email)return;const b=$("resendSignupOtpBtn");b.disabled=true;try{const {error}=await supabaseClient.auth.resend({type:"signup",email});if(error)throw error;$("customerMessage").textContent="A new 6-digit code has been sent to "+email+".";toast("New verification code sent.");}catch(e){$("customerMessage").textContent=e.message||"Could not resend the code. Please wait and try again.";}finally{b.disabled=false;}};
  $("forgotPasswordBtn").onclick=async()=>{const email=$("customerForm").elements.email.value.trim().toLowerCase();if(!email){$("customerMessage").textContent="Enter your email address first.";return;}try{const {error}=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});if(error)throw error;$("customerMessage").textContent="Password reset link sent to "+email+". Open the email link to choose a new password.";toast("Password reset email sent.");}catch(e){$("customerMessage").textContent=e.message||"Could not send password reset email.";}};
  $("customerSignOut").onclick=async()=>{try{const {error}=await supabaseClient.auth.signOut();if(error)throw error;authUser=null;cart=[];write(STORE.cart,cart);renderCart();renderCustomerModal();setCustomerMode("signin");toast("You have signed out.");}catch(e){toast("Sign out failed: "+e.message);}};
- $("adminFooter").onclick=async e=>{
-  e.preventDefault();
-  if(!authUser){openCustomer();$("customerMessage").textContent="Sign in with your store administrator account to open Admin Dashboard.";return;}
-  if(!isStoreAdmin()){toast("Access denied. This account is not an authorised store administrator.");return;}
-  setAdminView("products");openModal("adminModal");
-  $("adminProductList").innerHTML='<p class="small-note">Loading live store data…</p>';
-  try{await loadSupabaseProducts();await loadAdminData();renderProducts();}
-  catch(err){console.error("Admin dashboard load failed:",err);toast("Admin data could not load: "+(err.message||"Check Supabase setup."));}
- };
+
+ $("adminFooter").onclick=async e=>{e.preventDefault();if(!authUser){openCustomer();toast("Please sign in with the store admin account.");return;}await loadStoreAdminRole();if(!storeAdmin){toast("This account does not have admin permission in profiles.role.");return;}setAdminView("products");openModal("adminModal")};
  document.querySelectorAll("[data-admin-view]").forEach(b=>b.onclick=()=>setAdminView(b.dataset.adminView));
  $("productForm").onsubmit=saveProduct;$("resetProductBtn").onclick=resetProductForm;
  $("newsletterForm").onsubmit=e=>{e.preventDefault();const input=e.currentTarget.querySelector('input[type="email"]'),email=input.value.trim().toLowerCase(),list=read(STORE.newsletter,[]);if(!list.includes(email)){list.push(email);write(STORE.newsletter,list)}e.currentTarget.reset();toast("Thanks for joining the N&L demo list.")};
