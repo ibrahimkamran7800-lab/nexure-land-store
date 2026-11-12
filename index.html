@@ -199,27 +199,7 @@
     </div>
   </div>
 
-  <!-- Customer account: local frontend preview only -->
-  <div class="modal hidden" id="customerModal">
-    <div class="modal-card customer-card">
-      <button class="modal-close icon-btn" data-close aria-label="Close">✕</button>
-      <p class="eyebrow">YOUR N&L ACCOUNT</p><h2>Welcome back.</h2>
-      <div class="account-tabs"><button class="account-tab active" data-account-tab="signin">Sign in</button><button class="account-tab" data-account-tab="signup">Create account</button></div>
-      <form id="customerForm" class="form-grid">
-        <label class="span-2">Full name<input name="name" autocomplete="name" placeholder="Your name"></label>
-        <label class="span-2">Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
-        <label class="span-2">Password<input name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters"></label>
-        <button class="button button-dark full span-2" type="submit" id="customerSubmit">Sign in (demo)</button>
-      </form>
-      <p class="small-note" id="customerMessage" aria-live="polite">Demo account only: no password is stored or sent. Secure sign-in will be connected later.</p>
-      <div id="customerPanel" class="hidden">
-        <div class="customer-welcome"><strong id="customerWelcome">Your account</strong><button class="button button-outline" id="customerSignOut" type="button">Sign out</button></div>
-        <div class="account-tabs"><button class="account-tab active" data-customer-view="orders">My orders</button><button class="account-tab" data-customer-view="profile">Profile</button><button class="account-tab" data-customer-view="wishlist">Wishlist</button></div>
-        <div id="customerView"></div>
-      </div>
-    </div>
-  </div>
-
+  
   <!-- Product details -->
   <div class="modal hidden" id="productModal">
     <div class="modal-card product-detail-card">
@@ -237,7 +217,67 @@
       <div id="wishlistItems" class="wishlist-items"></div>
     </div>
   </div>
+<!-- Customer account -->
+<div class="modal hidden" id="customerModal">
+  <div class="modal-card customer-card">
+    <button class="modal-close icon-btn" data-close aria-label="Close">✕</button>
+    <p class="eyebrow">YOUR N&L ACCOUNT</p>
+    <h2>Welcome back.</h2>
 
+    <div class="account-tabs">
+      <button class="account-tab active" data-account-tab="signin" type="button">Sign in</button>
+      <button class="account-tab" data-account-tab="signup" type="button">Create account</button>
+    </div>
+
+    <form id="customerForm" class="form-grid">
+      <label class="span-2" id="customerNameLabel">
+        Full name
+        <input name="name" autocomplete="name" placeholder="Your name">
+      </label>
+
+      <label class="span-2">
+        Email address
+        <input name="email" type="email" required autocomplete="email" placeholder="you@example.com">
+      </label>
+
+      <label class="span-2" id="customerPasswordLabel">
+        Password
+        <input name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="At least 8 characters">
+      </label>
+
+      <label class="span-2 hidden" id="customerOtpLabel">
+        6-digit email verification code
+        <input name="otp" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit code">
+      </label>
+
+      <label class="span-2 hidden" id="customerNewPasswordLabel">
+        New password
+        <input name="newPassword" type="password" minlength="8" autocomplete="new-password" placeholder="At least 8 characters">
+      </label>
+
+      <button class="button button-dark full span-2" type="submit" id="customerSubmit">SIGN IN</button>
+
+      <button class="button button-outline full span-2 hidden" type="button" id="resendSignupOtpBtn">Resend verification code</button>
+
+      <button class="button button-outline full span-2 hidden" type="button" id="forgotPasswordBtn">Forgot password?</button>
+    </form>
+
+    <p class="small-note" id="customerMessage" aria-live="polite">Sign in with your registered email and password.</p>
+
+    <div id="customerPanel" class="hidden">
+      <div class="customer-welcome">
+        <strong id="customerWelcome">Your account</strong>
+        <button class="button button-outline" id="customerSignOut" type="button">Sign out</button>
+      </div>
+      <div class="account-tabs">
+        <button class="account-tab active" data-customer-view="orders" type="button">My orders</button>
+        <button class="account-tab" data-customer-view="profile" type="button">Profile</button>
+        <button class="account-tab" data-customer-view="wishlist" type="button">Wishlist</button>
+      </div>
+      <div id="customerView"></div>
+    </div>
+  </div>
+</div>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="app.js" defer></script>
 
