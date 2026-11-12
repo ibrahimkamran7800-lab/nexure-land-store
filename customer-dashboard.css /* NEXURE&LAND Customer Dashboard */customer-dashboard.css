@@ -1,0 +1,95 @@
+
+/* NEXURE&LAND Customer Dashboard */
+
+.nl-dashboard {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 24px;
+  width: 100%;
+  min-height: 480px;
+  color: #f5f5f5;
+  background: #111;
+  border: 1px solid #b99a55;
+  border-radius: 14px;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+}
+
+.nl-dashboard-sidebar {
+  background: #080808;
+  padding: 24px 15px;
+  border-right: 1px solid #333;
+}
+
+.nl-dashboard-title {
+  color: #d6b66b;
+  font-size: 21px;
+  font-weight: bold;
+  margin-bottom: 25px;
+}
+
+.nl-dashboard-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nl-dashboard-nav button {
+  width: 100%;
+  padding: 13px;
+  color: #ddd;
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nl-dashboard-nav button:hover,
+.nl-dashboard-nav button.active {
+  color: #111;
+  background: #d6b66b;
+  border-color: #d6b66b;
+}
+
+.nl-dashboard-content {
+  padding: 25px;
+  min-width: 0;
+}
+
+.nl-dashboard-content h2 {
+  color: #d6b66b;
+  margin-top: 0;
+}
+
+.nl-dashboard-card {
+  padding: 18px;
+  margin-bottom: 15px;
+  background: #1b1b1b;
+  border: 1px solid #333;
+  border-radius: 10px;
+}
+
+.nl-dashboard button {
+  font: inherit;
+}
+
+@media (max-width: 650px) {
+  .nl-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .nl-dashboard-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid #333;
+  }
+
+  .nl-dashboard-nav {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .nl-dashboard-content {
+    padding: 16px;
+  }
+}
