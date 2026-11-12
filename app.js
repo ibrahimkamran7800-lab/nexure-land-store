@@ -177,7 +177,31 @@ function openCustomer(){openModal("customerModal");renderCustomerModal()}
 function setCustomerMode(mode){customerMode=mode;customerRecoveryMode=false;otpSent=false;document.querySelectorAll("[data-account-tab]").forEach(b=>b.classList.toggle("active",b.dataset.accountTab===mode));const f=$("customerForm");$("customerNameLabel").classList.toggle("hidden",mode!=="signup");$("customerPasswordLabel").classList.remove("hidden");$("customerNewPasswordLabel").classList.add("hidden");$("customerOtpLabel").classList.add("hidden");$("resendSignupOtpBtn").classList.add("hidden");$("forgotPasswordBtn").classList.toggle("hidden",mode!=="signin");f.elements.name.disabled=false;f.elements.email.disabled=false;f.elements.email.required=true;f.elements.password.disabled=false;f.elements.otp.disabled=false;f.elements.otp.value="";f.elements.otp.required=false;f.elements.password.value="";f.elements.name.required=mode==="signup";f.elements.password.autocomplete=mode==="signup"?"new-password":"current-password";$("customerSubmit").textContent=mode==="signup"?"CREATE ACCOUNT":"SIGN IN";$("customerMessage").textContent=mode==="signup"?"Enter your name, email and password. We will send a 6-digit verification code to your email.":"Sign in with your registered email and password."}
 function showPasswordRecovery(){customerRecoveryMode=true;customerMode="recovery";authUser=null;renderCustomerModal();document.querySelectorAll("[data-account-tab]").forEach(b=>b.classList.remove("active"));$("customerNameLabel").classList.add("hidden");$("customerNameLabel").querySelector("input").required=false;$("customerPasswordLabel").classList.add("hidden");$("customerPasswordLabel").querySelector("input").required=false;$("customerOtpLabel").classList.add("hidden");$("customerNewPasswordLabel").classList.remove("hidden");$("customerNewPasswordLabel").querySelector("input").required=true;$("forgotPasswordBtn").classList.add("hidden");$("customerSubmit").textContent="Update password";$("customerMessage").textContent="Choose a new password with at least 8 characters.";openModal("customerModal")}
 
-function adminStats(){$("adminDemoOrders").textContent=orders.length;$("adminDemoProducts").textContent=products.length;$("adminLowStock").textContent=products.filter(p=>Number(p.stock)<=5).length;$("adminDemoCustomers").textContent=customers.length}
+function adminStats()async function adminStats(){
+  const orderCounter = $("adminDemoOrders");
+
+  $("adminDemoProducts").textContent = products.length;
+  $("adminLowStock").textContent =
+    products.filter(p => Number(p.stock) <= 5).length;
+  $("adminDemoCustomers").textContent = customers.length;
+
+  if (!supabaseClient) {
+    orderCounter.textContent = "!";
+    return;
+  }
+
+  const { count, error } = await supabaseClient
+    .from("orders")
+    .select("id", { count: "exact", head: true });
+
+  if (error) {
+    console.error("Admin order count error:", error);
+    orderCounter.textContent = "!";
+    return;
+  }
+
+  orderCounter.textContent = count ?? 0;
+}
 function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");renderAdminView()}
 async function renderAdminView(){
  adminStats();
