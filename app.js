@@ -295,7 +295,21 @@ async function setup(){
  $("year").textContent=new Date().getFullYear();$("storeMessage").textContent="Connecting to the NEXURE&LAND catalogue…";
  await loadSupabaseProducts();
  if(!supabaseClient){$("storeMessage").textContent="Supabase library unavailable. Online account and bag are disabled.";}else{
-  supabaseClient.auth.onAuthStateChange((event,session)=>{setTimeout(()=>{if(event==="PASSWORD_RECOVERY"){showPasswordRecovery();return;}handleAuthChange(session?.user||null);},0)});
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY") {
+      customerRecoveryMode = true;
+      authUser = session?.user || null;
+      showPasswordRecovery();
+      return;
+    }
+
+    if (event === "SIGNED_IN" && customerRecoveryMode) {
+      authUser = session?.user || null;
+      return;
+    }
+
+    handleAuthChange(session?.user || null);
+  });
   try{const {data:{session},error}=await supabaseClient.auth.getSession();if(error)throw error;await handleAuthChange(session?.user||null);}catch(e){console.error(e);toast("Could not restore your account session.");}
  }
  $("bagBtn").onclick=openBag;$("wishlistBtn").onclick=openWishlist;$("checkoutBtn").onclick=()=>{if(!authUser){openCustomer();return toast("Sign in to continue with your online bag.");}if(!cart.length)return toast("Add a product to your bag first.");closeAll();resetCheckout();$("checkoutTotal").textContent=money(subtotal());$("checkoutModal").classList.remove("hidden");$("overlay").classList.remove("hidden");document.body.classList.add("no-scroll")};
