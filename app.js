@@ -263,31 +263,67 @@ async function checkout(e){
  const email=f.elements.email.value.trim().toLowerCase();
  if(!name||!phone||!address||!city||!email)return toast("Please complete all checkout fields.");
  if(email!==(authUser.email||"").toLowerCase())return toast("Use the same email address as your signed-in account.");
- const items=cart.map(i=>({id:String(i.id),qty:Number(i.qty),size:i.size||"M",color:i.color||"Black"}));
+ const orderedItems=cart.map(i=>({...i}));
+ const items=orderedItems.map(i=>({id:String(i.id),qty:Number(i.qty),size:i.size||"M",color:i.color||"Black"}));
  if(items.some(i=>!i.id||!Number.isInteger(i.qty)||i.qty<1))return toast("Your bag contains an invalid item. Please refresh and try again.");
- btn.disabled=true;const oldText=btn.textContent;btn.textContent="PLACING ORDER…";
+ btn.disabled=true;const oldText=btn.textContent;btn.textContent="PLACING ORDERâ€¦";
  try{
   const paymentLabels={cod:"Cash on Delivery",easypaisa:"EasyPaisa (manual payment)",jazzcash:"JazzCash (manual payment)"};
-  const {error:metadataError}=await supabaseClient.auth.updateUser({data:{full_name:name,phone}});if(metadataError)throw metadataError;
+  const paymentMethod=paymentLabels[f.elements.payment.value]||"Cash on Delivery";
+  const {error:metadataError}=await supabaseClient.auth.updateUser({data:{full_name:name,phone}});
+  if(metadataError)throw metadataError;
   const {data,error}=await supabaseClient.rpc("place_store_order",{
    p_phone:phone,p_shipping_address:address,p_city:city,
-   p_payment_method:paymentLabels[f.elements.payment.value]||"Cash on Delivery",p_items:items
+   p_payment_method:paymentMethod,p_items:items
   });
   if(error)throw error;
   if(!data?.id)throw new Error("The database did not confirm the order.");
+
+  const orderNo=data.order_number||data.id;
+  const itemLines=orderedItems.map((i,index)=>
+   `${index+1}. ${i.name} | Qty: ${i.qty} | Size: ${i.size||"M"} | Color: ${i.color||"Black"} | ${money(Number(i.price)*Number(i.qty))}`
+  );
+  const waMessage=[
+   "Assalam-o-Alaikum NEXURE&LAND,",
+   "I have placed an order through your website.",
+   `Order: ${orderNo}`,
+   "",
+   "ORDER ITEMS:",
+   ...itemLines,
+   "",
+   `Total: ${money(data.total)}`,
+   `Name: ${name}`,
+   `Phone: ${phone}`,
+   `Email: ${email}`,
+   `Address: ${address}`,
+   `City: ${city}`,
+   `Payment method: ${paymentMethod}`,
+   "",
+   "Please confirm my order and delivery details."
+  ].join("\n");
+  const waUrl=`https://wa.me/923170917527?text=${encodeURIComponent(waMessage)}`;
+
   let cartClearWarning="";
   const {error:cartError}=await supabaseClient.from("cart_items").delete().eq("user_id",authUser.id);
-  if(cartError){console.error("Order placed but cart cleanup failed:",cartError);cartClearWarning=" Your order was saved, but please clear your bag manually if items remain.";}
+  if(cartError){
+   console.error("Order placed but cart cleanup failed:",cartError);
+   cartClearWarning=" Your order was saved, but please clear your bag manually if items remain.";
+  }
   cart=[];write(STORE.cart,cart);renderCart();
   await loadSupabaseProducts();renderProducts();
   await renderCustomerView("orders");
   $("checkoutResult").classList.remove("hidden");
-  $("checkoutResult").innerHTML=`<strong>Order ${esc(data.order_number||data.id)} placed successfully.</strong><br>Total: ${money(data.total)} · Status: Pending.<br>Payment method: ${esc(paymentLabels[f.elements.payment.value]||"Cash on Delivery")}. Payment is not processed online; our team will confirm manual payment details.${esc(cartClearWarning)}`;
+  $("checkoutResult").innerHTML=`<strong>Order ${esc(orderNo)} placed successfully.</strong><br>Total: ${money(data.total)} Â· Status: Pending.<br>Payment method: ${esc(paymentMethod)}. Payment is not processed online; our team will confirm manual payment details.<br><br><a class="button button-dark full" href="${esc(waUrl)}" target="_blank" rel="noopener">Send order details on WhatsApp â†—</a><p class="small-note">WhatsApp will open with your order message prepared. Please review it and tap Send in WhatsApp. Your website order has already been saved.</p>${esc(cartClearWarning)}`;
   f.classList.add("hidden");$("checkoutModal").querySelector("h2").textContent="Order placed";
   toast("Your order has been saved online.");
- }catch(error){console.error("Online checkout failed:",error);toast("Order could not be placed: "+(error.message||"Please try again."));}
- finally{btn.disabled=false;btn.textContent=oldText;}
+ }catch(error){
+  console.error("Online checkout failed:",error);
+  toast("Order could not be placed: "+(error.message||"Please try again."));
+ }finally{
+  btn.disabled=false;btn.textContent=oldText;
+ }
 }
+
 function resetCheckout(){$("checkoutForm").classList.remove("hidden");$("checkoutResult").classList.add("hidden");$("checkoutResult").textContent="";$("checkoutModal").querySelector("h2").textContent="Checkout"}
 async function setup(){
  // Bind account tabs immediately so they are ready even during recovery.
