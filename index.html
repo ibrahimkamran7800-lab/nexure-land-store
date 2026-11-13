@@ -64,6 +64,7 @@
 
     <section class="ticker"><span>MODERN FITS</span><span>✳</span><span>EVERYDAY LUXURY</span><span>✳</span><span>MADE FOR MOVEMENT</span><span>✳</span><span>MODERN FITS</span></section>
 
+
     <section class="fabric-story section" aria-label="The NEXURE and LAND fabric story">
       <div class="fabric-heading">
         <p class="eyebrow">THE DETAILS MAKE THE DIFFERENCE</p>
@@ -110,6 +111,7 @@
       <div class="editorial-copy"><p class="eyebrow">THE MEN'S STYLE APPROACH</p><h2>Men's essentials.<br><em>Better style.</em></h2><p>Men's shirts, tees, trousers, and everyday essentials with modern fits and considered details.</p><a href="#shop" class="text-link">Discover N&L ↗</a></div>
     </section>
 
+
     <section class="faq-section section" id="faq">
       <div class="section-heading"><div><p class="eyebrow">HERE TO HELP</p><h2>Frequently asked <em>questions.</em></h2></div><p class="section-subtitle">Everything you need to know before your next favourite piece.</p></div>
       <div class="faq-layout">
@@ -137,6 +139,7 @@
 </div>
 </footer>
 
+  <!-- Shopping bag drawer -->
   <div class="overlay hidden" id="overlay"></div>
   <aside class="drawer" id="bagDrawer" aria-label="Shopping bag">
     <div class="drawer-head"><div><p class="eyebrow">YOUR SELECTION</p><h3>Shopping bag <span id="drawerCount">(0)</span></h3></div><button class="icon-btn" data-close>✕</button></div>
@@ -144,6 +147,7 @@
     <div class="bag-footer"><div class="subtotal"><span>Subtotal</span><strong id="bagSubtotal">Rs. 0</strong></div><p class="small-note">Delivery charges are calculated at checkout.</p><button class="button button-dark full" id="checkoutBtn">Continue to checkout ↗</button></div>
   </aside>
 
+  <!-- Checkout modal -->
   <div class="modal hidden" id="checkoutModal">
     <div class="modal-card"><button class="modal-close icon-btn" data-close>✕</button><p class="eyebrow">ALMOST YOURS</p><h2>Checkout</h2>
       <form id="checkoutForm" class="form-grid">
@@ -159,12 +163,13 @@
     </div>
   </div>
 
+  <!-- Admin workspace: protected by the Supabase profiles.role admin policy -->
   <div class="modal hidden" id="adminModal">
     <div class="modal-card admin-card workspace-card">
       <button class="modal-close icon-btn" data-close aria-label="Close admin dashboard">✕</button>
-      <p class="eyebrow">N&L MANAGEMENT · ADMIN</p>
+      <p class="eyebrow">N&L MANAGEMENT · SECURE ADMIN</p>
       <h2>Store dashboard</h2>
-      <p class="preview-notice">Admin access is checked against your Supabase profiles table. Orders and order status are stored in the database.</p>
+      <p class="preview-notice">Live Supabase dashboard. Access is restricted to accounts with the admin role. Products, orders and customer profiles are loaded from the database.</p>
       <div class="admin-stats">
         <article><span>Orders</span><strong id="adminDemoOrders">0</strong></article>
         <article><span>Products</span><strong id="adminDemoProducts">0</strong></article>
@@ -196,6 +201,7 @@
     </div>
   </div>
 
+  <!-- Customer account: email/password sign-in, email OTP signup verification and password recovery -->
   <div class="modal hidden" id="customerModal">
     <div class="modal-card customer-card">
       <button class="modal-close icon-btn" data-close aria-label="Close">✕</button>
@@ -206,6 +212,7 @@
         <label class="span-2">Email address<input name="email" type="email" required autocomplete="email" placeholder="you@example.com"></label>
         <label class="span-2" id="customerPasswordLabel">Password<input name="password" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters" required></label>
         <label class="span-2 hidden" id="customerNewPasswordLabel">New password<input name="newPassword" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters"></label>
+        <label class="span-2 hidden" id="customerConfirmPasswordLabel">Confirm new password<input name="confirmPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Re-enter your new password"></label>
         <label class="span-2 hidden" id="customerOtpLabel">6-digit email verification code<input name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" placeholder="Enter the 6-digit code"></label>
         <button class="button button-dark full span-2" type="submit" id="customerSubmit">SIGN IN</button>
       </form>
@@ -220,6 +227,7 @@
     </div>
   </div>
 
+  <!-- Product details -->
   <div class="modal hidden" id="productModal">
     <div class="modal-card product-detail-card">
       <button class="modal-close icon-btn" data-close aria-label="Close">✕</button>
@@ -227,6 +235,7 @@
     </div>
   </div>
 
+  <!-- Wishlist modal -->
   <div class="modal hidden" id="wishlistModal">
     <div class="modal-card wishlist-modal-card">
       <button class="modal-close icon-btn" data-close aria-label="Close wishlist">✕</button>
