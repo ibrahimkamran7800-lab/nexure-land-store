@@ -290,28 +290,56 @@ async function checkout(e){
 }
 function resetCheckout(){$("checkoutForm").classList.remove("hidden");$("checkoutResult").classList.add("hidden");$("checkoutResult").textContent="";$("checkoutModal").querySelector("h2").textContent="Checkout"}
 async function setup(){
- // Bind account tabs immediately, before any network request can delay setup.
- document.querySelectorAll("[data-account-tab]").forEach(b=>{b.type="button";b.onclick=()=>setCustomerMode(b.dataset.accountTab)});
- $("year").textContent=new Date().getFullYear();$("storeMessage").textContent="Connecting to the NEXURE&LAND catalogue…";
- await loadSupabaseProducts();
- if(!supabaseClient){$("storeMessage").textContent="Supabase library unavailable. Online account and bag are disabled.";}else{
-  supabaseClient.auth.onAuthStateChange((event, session) => {
-    if (event === "PASSWORD_RECOVERY") {
-      customerRecoveryMode = true;
-      authUser = session?.user || null;
-      showPasswordRecovery();
-      return;
-    }
+ // Bind account tabs immediately so they are ready even during recovery.
+ document.querySelectorAll("[data-account-tab]").forEach(b=>{
+  b.type="button";
+  b.onclick=()=>setCustomerMode(b.dataset.accountTab);
+ });
 
-    if (event === "SIGNED_IN" && customerRecoveryMode) {
-      authUser = session?.user || null;
-      return;
-    }
+ $("year").textContent=new Date().getFullYear();
+ $("storeMessage").textContent="Connecting to the NEXURE&LAND catalogue…";
 
-    handleAuthChange(session?.user || null);
+ if(!supabaseClient){
+  $("storeMessage").textContent="Supabase library unavailable. Online account and bag are disabled.";
+ }else{
+  // Supabase puts the recovery type in the URL hash. Detect it before
+  // restoring a normal signed-in customer view.
+  const recoveryInUrl=new URLSearchParams(location.hash.slice(1)).get("type")==="recovery";
+  if(recoveryInUrl) customerRecoveryMode=true;
+
+  // Register this listener BEFORE any awaited network request.
+  supabaseClient.auth.onAuthStateChange((event,session)=>{
+   if(event==="PASSWORD_RECOVERY"){
+    customerRecoveryMode=true;
+    authUser=session?.user||null;
+    setTimeout(()=>showPasswordRecovery(),0);
+    return;
+   }
+   if(customerRecoveryMode){
+    if(session?.user) authUser=session.user;
+    return;
+   }
+   setTimeout(()=>handleAuthChange(session?.user||null),0);
   });
-  try{const {data:{session},error}=await supabaseClient.auth.getSession();if(error)throw error;await handleAuthChange(session?.user||null);}catch(e){console.error(e);toast("Could not restore your account session.");}
+
+  try{
+   const {data:{session},error}=await supabaseClient.auth.getSession();
+   if(error) throw error;
+   if(recoveryInUrl||customerRecoveryMode){
+    authUser=session?.user||null;
+    customerRecoveryMode=true;
+    showPasswordRecovery();
+   }else{
+    await handleAuthChange(session?.user||null);
+   }
+  }catch(e){
+   console.error(e);
+   toast("Could not restore your account session.");
+  }
  }
+
+ // Product loading happens only after the auth recovery listener is active.
+ await loadSupabaseProducts();
  $("bagBtn").onclick=openBag;$("wishlistBtn").onclick=openWishlist;$("checkoutBtn").onclick=()=>{if(!authUser){openCustomer();return toast("Sign in to continue with your online bag.");}if(!cart.length)return toast("Add a product to your bag first.");closeAll();resetCheckout();$("checkoutTotal").textContent=money(subtotal());$("checkoutModal").classList.remove("hidden");$("overlay").classList.remove("hidden");document.body.classList.add("no-scroll")};
  $("searchToggle").onclick=()=>{$("searchPanel").classList.toggle("hidden");if(!$("searchPanel").classList.contains("hidden"))$("searchInput").focus()};
  $("searchClose").onclick=()=>{$("searchPanel").classList.add("hidden");$("searchInput").value="";searchTerm="";renderProducts()};
@@ -374,6 +402,6 @@ async function setup(){
  document.querySelectorAll("[data-admin-view]").forEach(b=>b.onclick=()=>setAdminView(b.dataset.adminView));
  $("productForm").onsubmit=saveProduct;$("resetProductBtn").onclick=resetProductForm;
  $("newsletterForm").onsubmit=e=>{e.preventDefault();const input=e.currentTarget.querySelector('input[type="email"]'),email=input.value.trim().toLowerCase(),list=read(STORE.newsletter,[]);if(!list.includes(email)){list.push(email);write(STORE.newsletter,list)}e.currentTarget.reset();toast("Thanks for joining the N&L demo list.")};
- renderProducts();renderCart();renderWishlist();renderCustomerModal();setCustomerMode("signin");adminStats();resetProductForm();
+ renderProducts();renderCart();renderWishlist();renderCustomerModal();if(customerRecoveryMode){showPasswordRecovery();}else{setCustomerMode("signin");}adminStats();resetProductForm();
 }
 document.addEventListener("DOMContentLoaded",setup);
