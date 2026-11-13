@@ -507,3 +507,22 @@ footer{padding:55px 5.2% 28px}
   }
 }
 
+
+/* NEXURE&LAND SIGN IN TEXT CENTER FIX */
+@media (max-width: 650px) {
+  .site-header .signin-account-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    vertical-align: middle;
+    line-height: 1 !important;
+    padding: 0 9px !important;
+    box-sizing: border-box;
+  }
+  .site-header .signin-account-btn,
+  .site-header .signin-account-btn * {
+    text-align: center !important;
+    line-height: 1 !important;
+  }
+}
