@@ -218,10 +218,10 @@ async function renderAdminCareMessages(){
  const host=$("adminCareMessages");if(!host)return;
  host.innerHTML='<p class="small-note">Loading customer messages…</p>';
  try{
-  const [messageResult,profileResult]=await Promise.all([
-   supabaseClient.from("customer_care_messages").select("*").order("created_at",{ascending:true}),
-   supabaseClient.from("profiles").select("id,full_name,email")
-  ]);
+ const [messageResult,profileResult]=await Promise.all([
+  supabaseClient.from("customer_care_messages").select("*").order("created_at",{ascending:true}),
+  supabaseClient.from("profiles").select("id,full_name")
+]);
   if(messageResult.error)throw messageResult.error;if(profileResult.error)throw profileResult.error;
   const messages=messageResult.data||[], profiles=profileResult.data||[];
   if(adminCareRealtimeChannel)supabaseClient.removeChannel(adminCareRealtimeChannel);
@@ -233,8 +233,7 @@ async function renderAdminCareMessages(){
   host.innerHTML='<div class="care-contact-links"><button class="button button-outline" type="button" id="refreshAdminCare">Refresh messages</button></div>'+ids.map(id=>{
    const person=profiles.find(p=>String(p.id)===String(id))||{};
    const thread=messages.filter(m=>String(m.customer_id)===String(id));
-   return `<article class="admin-view-card care-thread"><div class="care-thread-head"><strong>${esc(person.full_name||person.email||"Customer")}</strong><span class="small-note">${esc(person.email||id)}</span></div><div class="care-thread-messages">${thread.map(m=>`<div class="care-message ${m.sender_role==="admin"?"care-message-admin":"care-message-customer"}"><strong>${m.sender_role==="admin"?"NEXURE&LAND":"Customer"}</strong><p>${esc(m.message)}</p><small>${esc(new Date(m.created_at).toLocaleString())}</small></div>`).join("")}</div><form class="care-reply-form" data-care-reply="${esc(id)}"><textarea name="message" rows="2" maxlength="2000" required placeholder="Write a reply..."></textarea><button class="button button-dark" type="submit">Send reply</button></form></article>`;
-  }).join("");
+  return `<article class="admin-view-card care-thread"><div class="care-thread-head"><strong>${esc(person.full_name||"Customer")}</strong><span class="small-note">${esc(id)}</span></div><div class="care-thread-messages">${thread.map(m=>`<div class="care-message ${m.sender_role==="admin"?"care-message-admin":"care-message-customer"}"><strong>${m.sender_role==="admin"?"NEXURE&LAND":"Customer"}</strong><p>${esc(m.message)}</p><small>${esc(new Date(m.created_at).toLocaleString())}</small></div>`).join("")}</div><form class="care-reply-form" data-care-reply="${esc(id)}"><textarea name="message" rows="2" maxlength="2000" required placeholder="Write a reply..."></textarea><button class="button button-dark" type="submit">Send reply</button></form></article>`;
   const refreshButton=$("refreshAdminCare");if(refreshButton)refreshButton.onclick=renderAdminCareMessages;
   host.querySelectorAll("[data-care-reply]").forEach(form=>form.addEventListener("submit",async event=>{
    event.preventDefault();const button=form.querySelector("button[type=submit]");const message=form.elements.message.value.trim();if(!message)return;
