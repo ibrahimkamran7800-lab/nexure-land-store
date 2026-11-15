@@ -671,3 +671,137 @@ footer{padding:22px 4% 14px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr
   .hero-premium h1{font-size:clamp(29px,8vw,36px)}
   .hero-premium .hero-kicker .eyebrow{font-size:8px}
 }
+
+
+/* ===== Approved QUALITY IN EVERY DETAIL artwork ===== */
+.best-sellers .quality-panel{
+  display:block;
+  min-width:0;
+  min-height:0;
+  padding:0;
+  overflow:hidden;
+  align-self:stretch;
+  border:1px solid rgba(190,145,76,.55);
+  border-radius:3px;
+  background:#100d09;
+  color:inherit;
+  text-decoration:none;
+  line-height:0;
+}
+.best-sellers .quality-panel img{
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:100%;
+  object-fit:cover;
+  object-position:center;
+}
+.best-sellers .quality-panel:focus-visible{
+  outline:2px solid #d6ad70;
+  outline-offset:3px;
+}
+@media(max-width:600px){
+  .best-sellers .quality-panel{
+    min-height:190px;
+  }
+  .best-sellers .quality-panel img{
+    height:100%;
+    min-height:190px;
+    object-fit:cover;
+  }
+}
+
+
+/* ===== Approved THE ART OF EVERYDAY DRESSING banner ===== */
+.editorial.section{
+  display:block;
+  width:100%;
+  margin:0;
+  padding:0;
+  min-height:0;
+  background:#080706;
+  overflow:hidden;
+}
+.editorial-banner-link{
+  display:block;
+  width:100%;
+  margin:0;
+  padding:0;
+  line-height:0;
+  overflow:hidden;
+}
+.editorial-banner-image{
+  display:block;
+  width:100%;
+  height:auto;
+  max-width:none;
+  margin:0;
+  object-fit:contain;
+}
+.editorial-banner-link:focus-visible{
+  outline:2px solid #d9ae69;
+  outline-offset:-3px;
+}
+@media(max-width:700px){
+  .editorial.section{padding:0}
+  .editorial-banner-image{
+    width:100%;
+    height:auto;
+    object-fit:contain;
+  }
+}
+
+
+/* ===== Approved DRESS BEYOND THE ORDINARY hero artwork ===== */
+.hero.hero-premium{
+  display:block;
+  width:100%;
+  height:auto;
+  min-height:0;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  background:#080706;
+}
+.hero-banner-link{
+  display:block;
+  width:100%;
+  margin:0;
+  padding:0;
+  line-height:0;
+  overflow:hidden;
+}
+.hero-banner-image{
+  display:block;
+  width:100%;
+  height:auto;
+  max-width:none;
+  object-fit:contain;
+  object-position:center;
+}
+.hero-banner-link:focus-visible{
+  outline:2px solid #d8ad6c;
+  outline-offset:-3px;
+}
+@media(max-width:700px){
+  .hero.hero-premium{height:auto;min-height:0}
+  .hero-banner-image{width:100%;height:auto;object-fit:contain}
+}
+
+
+/* Header controls: separate outlined boxes for Wishlist, Sign In and Bag */
+.header-actions .wishlist-header-btn,
+.header-actions .signin-account-btn,
+.header-actions .bag-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  min-height:34px;
+  padding:7px 10px;
+  border:1px solid #cfc7b9;
+  border-radius:4px;
+  background:transparent;
+  color:#171613;
+  box-shadow:none;
+}
