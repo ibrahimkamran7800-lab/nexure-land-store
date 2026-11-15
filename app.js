@@ -191,7 +191,7 @@ async function loadAdminData(){
  if(!isStoreAdmin())throw new Error("This account does not have the admin role in profiles.");
  const [orderResult,profileResult]=await Promise.all([
   supabaseClient.from("orders").select("*, order_items(*)").order("created_at",{ascending:false}),
-  supabaseClient.from("profiles").select("*")
+  supabaseClient.from("profiles").select("id,full_name,role")
  ]);
  if(orderResult.error)throw orderResult.error;
  if(profileResult.error)throw profileResult.error;
@@ -201,7 +201,15 @@ async function loadAdminData(){
 function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");$("adminCarePanel").classList.toggle("hidden",view!=="care");renderAdminView();}
 async function renderAdminView(){
  if(!isStoreAdmin())return;
- try{await loadAdminData();}catch(error){console.error("Admin data could not load:",error);if(adminView==="orders")$("adminOrdersList").innerHTML=`<p class="small-note">Could not load orders: ${esc(error.message||"Check database permissions.")}</p>`;return;}
+ try{await loadAdminData();}catch(error){
+  console.error("Admin data could not load:",error);
+  const message=`<p class="small-note">Could not load this section: ${esc(error.message||"Check the Supabase table and admin RLS permissions.")}</p>`;
+  if(adminView==="products")$("adminProductList").innerHTML=message;
+  else if(adminView==="orders")$("adminOrdersList").innerHTML=message;
+  else if(adminView==="customers")$("adminCustomersList").innerHTML=message;
+  else if(adminView==="care")$("adminCareMessages").innerHTML=message;
+  return;
+ }
  if(adminView==="products"){
   $("adminProductList").innerHTML=products.map(p=>`<div class="admin-row"><div><strong>${esc(p.name)}</strong><div class="small-note">${money(p.price)} · ${esc(p.category)} · Stock ${p.stock}</div></div><div class="admin-row-actions"><button class="button button-outline" type="button" data-edit="${esc(p.id)}">Edit</button><button class="button button-outline" type="button" data-delete="${esc(p.id)}">Delete</button></div></div>`).join("")||'<p class="small-note">No products yet. Add one above.</p>';
   $("adminProductList").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editProduct(b.dataset.edit));$("adminProductList").querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteProduct(b.dataset.delete));
@@ -209,7 +217,7 @@ async function renderAdminView(){
   $("adminOrdersList").innerHTML=orders.length?orders.map(o=>`<article class="admin-view-card"><div class="order-preview-row"><strong>${esc(o.order_number||o.id)}</strong><span class="order-status">${esc(o.status||"pending")}</span></div><p class="small-note">${esc(o.customer_name||"Customer")} · ${esc(o.customer_email||"")} · ${money(o.total_amount)}</p><p class="small-note">${esc(o.phone||"")} · ${esc(o.city||"")} · ${esc(o.payment_method||"")}</p><p class="small-note">${esc(o.shipping_address||"")}</p><p>${(o.order_items||[]).map(i=>`${esc(i.product_name)} × ${i.quantity} (${esc(i.size||"-" )}, ${esc(i.color||"-")})`).join("<br>")}</p><label class="admin-status-label">Update status<select data-status="${esc(o.id)}">${["pending","confirmed","processing","shipped","delivered","cancelled"].map(st=>`<option value="${st}" ${String(o.status).toLowerCase()===st?"selected":""}>${st[0].toUpperCase()+st.slice(1)}</option>`).join("")}</select></label></article>`).join(""):'<div class="account-empty">No online orders yet.</div>';
   $("adminOrdersList").querySelectorAll("[data-status]").forEach(sel=>sel.onchange=async()=>{sel.disabled=true;try{const {data,error}=await supabaseClient.from("orders").update({status:sel.value}).eq("id",sel.dataset.status).select("id,status").single();if(error)throw error;if(!data)throw new Error("No order was updated. Check admin permissions.");toast("Order status updated online.");await renderAdminView();}catch(error){toast("Could not update order: "+error.message);sel.disabled=false;}});
  }else if(adminView==="customers"){
-  $("adminCustomersList").innerHTML=customers.length?customers.map(c=>`<article class="admin-view-card"><strong>${esc(c.full_name||c.email||"Customer")}</strong><p class="small-note">${esc(c.email||"")} · ${esc(c.role||"customer")}</p><p class="small-note">${orders.filter(o=>o.user_id===c.id).length} order(s)</p></article>`).join(""):'<div class="account-empty">No customer profiles found.</div>';
+  $("adminCustomersList").innerHTML=customers.length?customers.map(c=>`<article class="admin-view-card"><strong>${esc(c.full_name||"Customer")}</strong><p class="small-note">${esc(c.role||"customer")}</p><p class="small-note">${orders.filter(o=>o.user_id===c.id).length} order(s)</p></article>`).join(""):'<div class="account-empty">No customer profiles found.</div>';
  }else if(adminView==="care"){
   await renderAdminCareMessages();
  }
@@ -218,10 +226,10 @@ async function renderAdminCareMessages(){
  const host=$("adminCareMessages");if(!host)return;
  host.innerHTML='<p class="small-note">Loading customer messages…</p>';
  try{
- const [messageResult,profileResult]=await Promise.all([
-  supabaseClient.from("customer_care_messages").select("*").order("created_at",{ascending:true}),
-  supabaseClient.from("profiles").select("id,full_name")
-]);
+  const [messageResult,profileResult]=await Promise.all([
+   supabaseClient.from("customer_care_messages").select("*").order("created_at",{ascending:true}),
+   supabaseClient.from("profiles").select("id,full_name")
+  ]);
   if(messageResult.error)throw messageResult.error;if(profileResult.error)throw profileResult.error;
   const messages=messageResult.data||[], profiles=profileResult.data||[];
   if(adminCareRealtimeChannel)supabaseClient.removeChannel(adminCareRealtimeChannel);
@@ -233,7 +241,8 @@ async function renderAdminCareMessages(){
   host.innerHTML='<div class="care-contact-links"><button class="button button-outline" type="button" id="refreshAdminCare">Refresh messages</button></div>'+ids.map(id=>{
    const person=profiles.find(p=>String(p.id)===String(id))||{};
    const thread=messages.filter(m=>String(m.customer_id)===String(id));
-  return `<article class="admin-view-card care-thread"><div class="care-thread-head"><strong>${esc(person.full_name||"Customer")}</strong><span class="small-note">${esc(id)}</span></div><div class="care-thread-messages">${thread.map(m=>`<div class="care-message ${m.sender_role==="admin"?"care-message-admin":"care-message-customer"}"><strong>${m.sender_role==="admin"?"NEXURE&LAND":"Customer"}</strong><p>${esc(m.message)}</p><small>${esc(new Date(m.created_at).toLocaleString())}</small></div>`).join("")}</div><form class="care-reply-form" data-care-reply="${esc(id)}"><textarea name="message" rows="2" maxlength="2000" required placeholder="Write a reply..."></textarea><button class="button button-dark" type="submit">Send reply</button></form></article>`;
+   return `<article class="admin-view-card care-thread"><div class="care-thread-head"><strong>${esc(person.full_name||"Customer")}</strong><span class="small-note">${esc(id)}</span></div><div class="care-thread-messages">${thread.map(m=>`<div class="care-message ${m.sender_role==="admin"?"care-message-admin":"care-message-customer"}"><strong>${m.sender_role==="admin"?"NEXURE&LAND":"Customer"}</strong><p>${esc(m.message)}</p><small>${esc(new Date(m.created_at).toLocaleString())}</small></div>`).join("")}</div><form class="care-reply-form" data-care-reply="${esc(id)}"><textarea name="message" rows="2" maxlength="2000" required placeholder="Write a reply..."></textarea><button class="button button-dark" type="submit">Send reply</button></form></article>`;
+  }).join("");
   const refreshButton=$("refreshAdminCare");if(refreshButton)refreshButton.onclick=renderAdminCareMessages;
   host.querySelectorAll("[data-care-reply]").forEach(form=>form.addEventListener("submit",async event=>{
    event.preventDefault();const button=form.querySelector("button[type=submit]");const message=form.elements.message.value.trim();if(!message)return;
