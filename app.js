@@ -23,7 +23,7 @@ function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt
 function money(v){return new Intl.NumberFormat("en-PK",{style:"currency",currency:"PKR",maximumFractionDigits:0}).format(Number(v)||0)}
 function makeId(prefix="nl"){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`}
 let products=read(STORE.products,null)||seedProducts,cart=read(STORE.cart,[]),wishlist=read(STORE.wishlist,[]),orders=read(STORE.orders,[]),customers=read(STORE.customers,[]);
-let authUser=null, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false,storeAdmin=false;
+let authUser=null, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false,storeAdmin=false,adminCareRealtimeChannel=null;
 function toast(message){let el=$("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast-message";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600)}
 function currentCustomer(){return authUser?{name:authUser.user_metadata?.full_name||authUser.email?.split("@")[0]||"Customer",email:authUser.email||"",phone:authUser.user_metadata?.phone||""}:null}
 function saveAll(){write(STORE.products,products);write(STORE.cart,cart);write(STORE.wishlist,wishlist);write(STORE.orders,orders);write(STORE.customers,customers)}
@@ -198,7 +198,7 @@ async function loadAdminData(){
  orders=orderResult.data||[];customers=profileResult.data||[];
  adminStats();
 }
-function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");renderAdminView();}
+function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");$("adminCarePanel").classList.toggle("hidden",view!=="care");renderAdminView();}
 async function renderAdminView(){
  if(!isStoreAdmin())return;
  try{await loadAdminData();}catch(error){console.error("Admin data could not load:",error);if(adminView==="orders")$("adminOrdersList").innerHTML=`<p class="small-note">Could not load orders: ${esc(error.message||"Check database permissions.")}</p>`;return;}
@@ -208,9 +208,41 @@ async function renderAdminView(){
  }else if(adminView==="orders"){
   $("adminOrdersList").innerHTML=orders.length?orders.map(o=>`<article class="admin-view-card"><div class="order-preview-row"><strong>${esc(o.order_number||o.id)}</strong><span class="order-status">${esc(o.status||"pending")}</span></div><p class="small-note">${esc(o.customer_name||"Customer")} · ${esc(o.customer_email||"")} · ${money(o.total_amount)}</p><p class="small-note">${esc(o.phone||"")} · ${esc(o.city||"")} · ${esc(o.payment_method||"")}</p><p class="small-note">${esc(o.shipping_address||"")}</p><p>${(o.order_items||[]).map(i=>`${esc(i.product_name)} × ${i.quantity} (${esc(i.size||"-" )}, ${esc(i.color||"-")})`).join("<br>")}</p><label class="admin-status-label">Update status<select data-status="${esc(o.id)}">${["pending","confirmed","processing","shipped","delivered","cancelled"].map(st=>`<option value="${st}" ${String(o.status).toLowerCase()===st?"selected":""}>${st[0].toUpperCase()+st.slice(1)}</option>`).join("")}</select></label></article>`).join(""):'<div class="account-empty">No online orders yet.</div>';
   $("adminOrdersList").querySelectorAll("[data-status]").forEach(sel=>sel.onchange=async()=>{sel.disabled=true;try{const {data,error}=await supabaseClient.from("orders").update({status:sel.value}).eq("id",sel.dataset.status).select("id,status").single();if(error)throw error;if(!data)throw new Error("No order was updated. Check admin permissions.");toast("Order status updated online.");await renderAdminView();}catch(error){toast("Could not update order: "+error.message);sel.disabled=false;}});
- }else{
+ }else if(adminView==="customers"){
   $("adminCustomersList").innerHTML=customers.length?customers.map(c=>`<article class="admin-view-card"><strong>${esc(c.full_name||c.email||"Customer")}</strong><p class="small-note">${esc(c.email||"")} · ${esc(c.role||"customer")}</p><p class="small-note">${orders.filter(o=>o.user_id===c.id).length} order(s)</p></article>`).join(""):'<div class="account-empty">No customer profiles found.</div>';
+ }else if(adminView==="care"){
+  await renderAdminCareMessages();
  }
+}
+async function renderAdminCareMessages(){
+ const host=$("adminCareMessages");if(!host)return;
+ host.innerHTML='<p class="small-note">Loading customer messages…</p>';
+ try{
+  const [messageResult,profileResult]=await Promise.all([
+   supabaseClient.from("customer_care_messages").select("*").order("created_at",{ascending:true}),
+   supabaseClient.from("profiles").select("id,full_name,email")
+  ]);
+  if(messageResult.error)throw messageResult.error;if(profileResult.error)throw profileResult.error;
+  const messages=messageResult.data||[], profiles=profileResult.data||[];
+  if(adminCareRealtimeChannel)supabaseClient.removeChannel(adminCareRealtimeChannel);
+  adminCareRealtimeChannel=supabaseClient.channel("nl-admin-customer-care")
+   .on("postgres_changes",{event:"INSERT",schema:"public",table:"customer_care_messages"},()=>renderAdminCareMessages())
+   .subscribe();
+  if(!messages.length){host.innerHTML='<div class="care-contact-links"><button class="button button-outline" type="button" id="refreshAdminCare">Refresh messages</button></div><div class="account-empty">No customer care messages yet.</div>';const emptyRefresh=$("refreshAdminCare");if(emptyRefresh)emptyRefresh.onclick=renderAdminCareMessages;return;}
+  const ids=[...new Set(messages.map(m=>m.customer_id))];
+  host.innerHTML='<div class="care-contact-links"><button class="button button-outline" type="button" id="refreshAdminCare">Refresh messages</button></div>'+ids.map(id=>{
+   const person=profiles.find(p=>String(p.id)===String(id))||{};
+   const thread=messages.filter(m=>String(m.customer_id)===String(id));
+   return `<article class="admin-view-card care-thread"><div class="care-thread-head"><strong>${esc(person.full_name||person.email||"Customer")}</strong><span class="small-note">${esc(person.email||id)}</span></div><div class="care-thread-messages">${thread.map(m=>`<div class="care-message ${m.sender_role==="admin"?"care-message-admin":"care-message-customer"}"><strong>${m.sender_role==="admin"?"NEXURE&LAND":"Customer"}</strong><p>${esc(m.message)}</p><small>${esc(new Date(m.created_at).toLocaleString())}</small></div>`).join("")}</div><form class="care-reply-form" data-care-reply="${esc(id)}"><textarea name="message" rows="2" maxlength="2000" required placeholder="Write a reply..."></textarea><button class="button button-dark" type="submit">Send reply</button></form></article>`;
+  }).join("");
+  const refreshButton=$("refreshAdminCare");if(refreshButton)refreshButton.onclick=renderAdminCareMessages;
+  host.querySelectorAll("[data-care-reply]").forEach(form=>form.addEventListener("submit",async event=>{
+   event.preventDefault();const button=form.querySelector("button[type=submit]");const message=form.elements.message.value.trim();if(!message)return;
+   button.disabled=true;
+   try{const {error}=await supabaseClient.from("customer_care_messages").insert({customer_id:form.dataset.careReply,sender_role:"admin",message});if(error)throw error;toast("Reply sent to customer.");await renderAdminCareMessages();}
+   catch(error){toast("Could not send reply: "+(error.message||"Please try again."));button.disabled=false;}
+  }));
+ }catch(error){host.innerHTML=`<p class="small-note">Could not load Customer Care messages: ${esc(error.message||"Check the customer_care_messages table and its RLS policies.")}</p>`;}
 }
 function resetProductForm(){const f=$("productForm");f.reset();f.elements.id.value="";$("saveProductBtn").textContent="Add product";$("productFormMessage").textContent=""}
 function editProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;const f=$("productForm");["id","name","price","stock","category","description","image_url"].forEach(k=>{if(f.elements[k])f.elements[k].value=p[k]??""});$("saveProductBtn").textContent="Update product";$("productFormMessage").textContent="Editing an online catalogue product.";f.scrollIntoView({behavior:"smooth",block:"center"})}
@@ -263,67 +295,31 @@ async function checkout(e){
  const email=f.elements.email.value.trim().toLowerCase();
  if(!name||!phone||!address||!city||!email)return toast("Please complete all checkout fields.");
  if(email!==(authUser.email||"").toLowerCase())return toast("Use the same email address as your signed-in account.");
- const orderedItems=cart.map(i=>({...i}));
- const items=orderedItems.map(i=>({id:String(i.id),qty:Number(i.qty),size:i.size||"M",color:i.color||"Black"}));
+ const items=cart.map(i=>({id:String(i.id),qty:Number(i.qty),size:i.size||"M",color:i.color||"Black"}));
  if(items.some(i=>!i.id||!Number.isInteger(i.qty)||i.qty<1))return toast("Your bag contains an invalid item. Please refresh and try again.");
- btn.disabled=true;const oldText=btn.textContent;btn.textContent="PLACING ORDERâ€¦";
+ btn.disabled=true;const oldText=btn.textContent;btn.textContent="PLACING ORDER…";
  try{
   const paymentLabels={cod:"Cash on Delivery",easypaisa:"EasyPaisa (manual payment)",jazzcash:"JazzCash (manual payment)"};
-  const paymentMethod=paymentLabels[f.elements.payment.value]||"Cash on Delivery";
-  const {error:metadataError}=await supabaseClient.auth.updateUser({data:{full_name:name,phone}});
-  if(metadataError)throw metadataError;
+  const {error:metadataError}=await supabaseClient.auth.updateUser({data:{full_name:name,phone}});if(metadataError)throw metadataError;
   const {data,error}=await supabaseClient.rpc("place_store_order",{
    p_phone:phone,p_shipping_address:address,p_city:city,
-   p_payment_method:paymentMethod,p_items:items
+   p_payment_method:paymentLabels[f.elements.payment.value]||"Cash on Delivery",p_items:items
   });
   if(error)throw error;
   if(!data?.id)throw new Error("The database did not confirm the order.");
-
-  const orderNo=data.order_number||data.id;
-  const itemLines=orderedItems.map((i,index)=>
-   `${index+1}. ${i.name} | Qty: ${i.qty} | Size: ${i.size||"M"} | Color: ${i.color||"Black"} | ${money(Number(i.price)*Number(i.qty))}`
-  );
-  const waMessage=[
-   "Assalam-o-Alaikum NEXURE&LAND,",
-   "I have placed an order through your website.",
-   `Order: ${orderNo}`,
-   "",
-   "ORDER ITEMS:",
-   ...itemLines,
-   "",
-   `Total: ${money(data.total)}`,
-   `Name: ${name}`,
-   `Phone: ${phone}`,
-   `Email: ${email}`,
-   `Address: ${address}`,
-   `City: ${city}`,
-   `Payment method: ${paymentMethod}`,
-   "",
-   "Please confirm my order and delivery details."
-  ].join("\n");
-  const waUrl=`https://wa.me/923170917527?text=${encodeURIComponent(waMessage)}`;
-
   let cartClearWarning="";
   const {error:cartError}=await supabaseClient.from("cart_items").delete().eq("user_id",authUser.id);
-  if(cartError){
-   console.error("Order placed but cart cleanup failed:",cartError);
-   cartClearWarning=" Your order was saved, but please clear your bag manually if items remain.";
-  }
+  if(cartError){console.error("Order placed but cart cleanup failed:",cartError);cartClearWarning=" Your order was saved, but please clear your bag manually if items remain.";}
   cart=[];write(STORE.cart,cart);renderCart();
   await loadSupabaseProducts();renderProducts();
   await renderCustomerView("orders");
   $("checkoutResult").classList.remove("hidden");
-  $("checkoutResult").innerHTML=`<strong>Order ${esc(orderNo)} placed successfully.</strong><br>Total: ${money(data.total)} Â· Status: Pending.<br>Payment method: ${esc(paymentMethod)}. Payment is not processed online; our team will confirm manual payment details.<br><br><a class="button button-dark full" href="${esc(waUrl)}" target="_blank" rel="noopener">Send order details on WhatsApp â†—</a><p class="small-note">WhatsApp will open with your order message prepared. Please review it and tap Send in WhatsApp. Your website order has already been saved.</p>${esc(cartClearWarning)}`;
+  $("checkoutResult").innerHTML=`<strong>Order ${esc(data.order_number||data.id)} placed successfully.</strong><br>Total: ${money(data.total)} · Status: Pending.<br>Payment method: ${esc(paymentLabels[f.elements.payment.value]||"Cash on Delivery")}. Payment is not processed online; our team will confirm manual payment details.${esc(cartClearWarning)}`;
   f.classList.add("hidden");$("checkoutModal").querySelector("h2").textContent="Order placed";
   toast("Your order has been saved online.");
- }catch(error){
-  console.error("Online checkout failed:",error);
-  toast("Order could not be placed: "+(error.message||"Please try again."));
- }finally{
-  btn.disabled=false;btn.textContent=oldText;
- }
+ }catch(error){console.error("Online checkout failed:",error);toast("Order could not be placed: "+(error.message||"Please try again."));}
+ finally{btn.disabled=false;btn.textContent=oldText;}
 }
-
 function resetCheckout(){$("checkoutForm").classList.remove("hidden");$("checkoutResult").classList.add("hidden");$("checkoutResult").textContent="";$("checkoutModal").querySelector("h2").textContent="Checkout"}
 async function setup(){
  // Bind account tabs immediately so they are ready even during recovery.

@@ -3,6 +3,7 @@
 */
 (function () {
   "use strict";
+  var customerCareRealtimeChannel = null;
 
   function safeText(value) {
     return typeof window.esc === "function"
@@ -48,6 +49,7 @@
       '<button type="button" class="customer-menu-item" data-dashboard-view="profile"><span>♙</span> My Profile</button>' +
       '<button type="button" class="customer-menu-item" data-dashboard-view="wishlist"><span>♡</span> My Wishlist</button>' +
       '<button type="button" class="customer-menu-item" data-dashboard-view="addresses"><span>⌖</span> My Addresses</button>' +
+      '<button type="button" class="customer-menu-item" data-dashboard-view="care"><span>✉</span> Customer Care</button>' +
       '<button type="button" class="customer-menu-item logout" data-dashboard-logout><span>↪</span> Sign Out</button>';
     var content = document.createElement("main");
     content.className = "customer-dashboard-content";
@@ -75,7 +77,8 @@
       orders: ["My Orders", "Track your purchases and check their latest status."],
       profile: ["My Profile", "Keep your account details up to date."],
       wishlist: ["My Wishlist", "Your saved NEXURE&LAND pieces."],
-      addresses: ["My Addresses", "Save delivery details on this device for quicker checkout."]
+      addresses: ["My Addresses", "Save delivery details on this device for quicker checkout."],
+      care: ["Customer Care", "Send a message to our team. Orders are still placed through the existing checkout and confirmed on WhatsApp."]
     };
     var host = document.getElementById("customerView");
     if (!host) return;
@@ -191,6 +194,57 @@
         button.addEventListener("click", function () { toggleWishlist(button.dataset.removeProduct); });
       });
       return;
+    }
+
+    if (view === "care") {
+      host.insertAdjacentHTML("beforeend", '<div class="care-contact-links"><a class="button button-outline" href="tel:+923170917527">Call Now</a><a class="button button-outline" href="https://wa.me/923170917527" target="_blank" rel="noopener">WhatsApp</a><a class="button button-dark" href="#shop" data-care-shop>Place an Order</a><button class="button button-outline" type="button" id="customerCareRefresh">Refresh messages</button></div><div id="customerCareMessages" class="care-thread-messages"><div class="dashboard-empty">Loading your messages…</div></div><form id="customerCareForm" class="care-reply-form"><textarea name="message" rows="3" maxlength="2000" required placeholder="Write your message to NEXURE&LAND..."></textarea><button class="button button-dark" type="submit">Send Message</button></form><p class="small-note" id="customerCareStatus" aria-live="polite">Your Customer Care messages are private to your account.</p>');
+      var careHost = document.getElementById("customerCareMessages");
+      async function loadCareMessages() {
+        careHost.innerHTML = '<div class="dashboard-empty">Loading your messages…</div>';
+        try {
+          var result = await supabaseClient.from("customer_care_messages").select("id,sender_role,message,created_at").eq("customer_id", authUser.id).order("created_at", {ascending:true});
+          if (result.error) throw result.error;
+          var messages = result.data || [];
+          careHost.innerHTML = messages.length ? messages.map(function (message) {
+            return '<div class="care-message ' + (message.sender_role === "admin" ? "care-message-admin" : "care-message-customer") + '"><strong>' + (message.sender_role === "admin" ? "NEXURE&LAND" : "You") + '</strong><p>' + safeText(message.message) + '</p><small>' + safeText(new Date(message.created_at).toLocaleString()) + '</small></div>';
+          }).join("") : '<div class="dashboard-empty">No messages yet. Send us a message and our team will reply here.</div>';
+        } catch (error) {
+          careHost.innerHTML = '<div class="dashboard-empty">Could not load Customer Care. Please check the messages table setup and try again.</div>';
+          document.getElementById("customerCareStatus").textContent = error.message || "Customer Care is temporarily unavailable.";
+        }
+      }
+      document.getElementById("customerCareForm").addEventListener("submit", async function (event) {
+        event.preventDefault();
+        var form = event.currentTarget;
+        var button = form.querySelector("button[type=submit]");
+        var message = form.elements.message.value.trim();
+        if (!message) return;
+        button.disabled = true;
+        try {
+          var sent = await supabaseClient.from("customer_care_messages").insert({customer_id:authUser.id,sender_role:"customer",message:message});
+          if (sent.error) throw sent.error;
+          form.reset();
+          document.getElementById("customerCareStatus").textContent = "Message sent. Our team will reply here.";
+          await loadCareMessages();
+        } catch (error) {
+          document.getElementById("customerCareStatus").textContent = "Message could not be sent: " + (error.message || "Please try again.");
+        } finally { button.disabled = false; }
+      });
+      var refreshCare = document.getElementById("customerCareRefresh");
+      if (refreshCare) refreshCare.addEventListener("click", loadCareMessages);
+      var shopLink = host.querySelector("[data-care-shop]");
+      if (shopLink) shopLink.addEventListener("click", function () { var close = document.querySelector("#customerModal [data-close]"); if (close) close.click(); });
+      await loadCareMessages();
+      if (customerCareRealtimeChannel) supabaseClient.removeChannel(customerCareRealtimeChannel);
+      customerCareRealtimeChannel = supabaseClient.channel("nl-customer-care-" + authUser.id)
+        .on("postgres_changes", {event:"INSERT", schema:"public", table:"customer_care_messages", filter:"customer_id=eq." + authUser.id}, loadCareMessages)
+        .subscribe();
+      return;
+    }
+
+    if (customerCareRealtimeChannel) {
+      supabaseClient.removeChannel(customerCareRealtimeChannel);
+      customerCareRealtimeChannel = null;
     }
 
     if (view === "addresses") {

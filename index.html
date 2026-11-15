@@ -17,9 +17,6 @@
     <nav class="main-nav" aria-label="Main navigation">
       <a href="#shop">Shop</a><a href="#collections">Collections</a><a href="#about">Our Story</a>
     </nav>
-    <a class="brand brand-header brand-logo" href="#top" aria-label="NEXURE&LAND home">
-      <span class="brand-wordmark">NEXURE<span class="brand-amp">&amp;</span>LAND</span>
-    </a>
     <div class="header-actions">
       <button class="icon-btn" id="searchToggle" aria-label="Search">⌕</button>
       <button class="header-tool wishlist-header-btn" id="wishlistBtn" aria-label="Open wishlist"><span class="header-tool-icon" aria-hidden="true">♡</span><span class="header-tool-label">Wishlist</span><span class="header-tool-count" id="wishlistCount">0</span></button>
@@ -183,6 +180,7 @@
         <button class="account-tab active" data-admin-view="products" type="button">Products</button>
         <button class="account-tab" data-admin-view="orders" type="button">Orders</button>
         <button class="account-tab" data-admin-view="customers" type="button">Customers</button>
+        <button class="account-tab" data-admin-view="care" type="button">Customer Care</button>
       </div>
       <section id="adminProductsPanel">
         <form id="productForm" class="form-grid admin-product-form">
@@ -201,6 +199,7 @@
       </section>
       <section id="adminOrdersPanel" class="hidden"><div id="adminOrdersList"></div></section>
       <section id="adminCustomersPanel" class="hidden"><div id="adminCustomersList"></div></section>
+      <section id="adminCarePanel" class="hidden"><div id="adminCareMessages"></div></section>
     </div>
   </div>
 
@@ -270,7 +269,7 @@
   <section id="privacy">
     <h2>Privacy Policy</h2>
     <p>We use the contact and delivery information you provide to process order requests and contact you about your purchase. We do not display your personal contact or address details publicly.</p>
-    <p>Do not submit payment card details or passwords through the contact form or email. We use Supabase to save and manage orders and account information, and to contact you about your purchase and delivery. Online card payments are not processed by this website.</p>
+    <p>Do not submit payment card details or passwords through the contact form or email. This starter website does not yet process or store orders automatically.</p>
   </section>
   <section id="terms">
     <h2>Terms &amp; Conditions</h2>
