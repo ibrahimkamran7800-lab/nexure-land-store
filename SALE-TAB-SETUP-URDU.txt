@@ -1,0 +1,16 @@
+NEXURE&LAND — SALE TAB SETUP
+
+1) Sab se pehle Supabase Dashboard kholen.
+2) SQL Editor > New query par jayen.
+3) sale-price-setup.sql file ka poora code paste kar ke Run dabayen.
+4) Success ka message aane ke baad website project ki ZIP GitHub repository mein upload/replace karein.
+5) Website deploy hone ke baad Admin Panel > Products mein product add/edit karein.
+6) Regular price likhein. Sale price mein discounted price likhein (ye regular price se kam honi chahiye).
+7) Sale price khaali chhorne par product Sale tab mein nahi aayega.
+
+Misal:
+Regular price: 5000
+Sale price: 3990
+
+Customer ko Sale tab mein 3990 discounted price aur 5000 original price nazar aayegi.
+Sale price ka hisaab product detail aur naye bag item mein bhi apply hota hai.

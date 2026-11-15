@@ -97,6 +97,7 @@
           <button class="filter" data-category="Casual" type="button">Men’s Casual</button>
           <button class="filter" data-category="Formal" type="button">Formal</button>
           <button class="filter" data-category="Shoes" type="button">Shoes</button>
+          <button class="filter sale-filter" data-category="Sale" type="button">Sale</button>
         </div>
         <select id="sortSelect" aria-label="Sort products"><option value="featured">Featured</option><option value="low">Price: Low to high</option><option value="high">Price: High to low</option></select>
       </div>
@@ -187,7 +188,8 @@
         <form id="productForm" class="form-grid admin-product-form">
           <input type="hidden" name="id">
           <label class="span-2">Product name<input name="name" required maxlength="90" placeholder="e.g. Premium Oxford Shirt"></label>
-          <label>Price (PKR)<input name="price" type="number" min="1" step="1" required></label>
+          <label>Regular price (PKR)<input name="price" type="number" min="1" step="1" required></label>
+          <label>Sale price (PKR, optional)<input name="sale_price" type="number" min="1" step="1" placeholder="Leave empty if not on sale"></label>
           <label>Stock quantity<input name="stock" type="number" min="0" step="1" value="0" required></label>
           <label>Category<select name="category"><option>Men</option><option>Casual</option><option>Formal</option><option>Shoes</option></select></label>
           <label>Product image<input name="image" type="file" accept="image/png,image/jpeg,image/webp"></label>
