@@ -410,3 +410,59 @@ body{background:#faf8f3;color:#171613}
 @media(max-width:1000px){.site-header{padding-inline:3%}.brand-logo img{width:145px}.main-nav{gap:13px}.product-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.hero-premium .hero-content{width:65%;padding-left:5%}}
 @media(max-width:700px){.announcement{font-size:9px;gap:7px;padding:8px 4%}.announcement-right{display:none}.site-header{height:68px;padding:0 4%;gap:8px}.brand-logo img{width:112px;height:54px}.main-nav{display:none}.menu-btn{display:block}.header-actions{gap:7px}.header-tool-label,.signin-account-btn span{display:none}.signin-account-btn{padding:7px 9px}.search-panel{top:68px}.hero-premium{height:590px}.hero-premium .hero-content{width:100%;padding:65px 6% 35px;justify-content:flex-start}.hero-premium .hero-image-shade{background:linear-gradient(90deg,rgba(12,12,11,.82),rgba(12,12,11,.42)),linear-gradient(0deg,rgba(12,12,11,.3),transparent)}.hero-premium h1{font-size:clamp(48px,11vw,72px)}.hero-premium .hero-copy{font-size:13px;max-width:390px}.hero-visual{min-height:0}.hero-assurance{grid-template-columns:1fr 1fr;padding:17px 5%;gap:16px}.hero-assurance>a{grid-column:1/-1;justify-self:start}.section{padding:52px 4.5%}.collection-grid{grid-template-columns:1fr 1fr;gap:10px}.collection-card{height:190px;padding:13px}.collection-label{font-size:9px}.product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 10px}.product-image-wrap{height:auto;aspect-ratio:3/4}.shop-toolbar{gap:12px}.filters{gap:6px}.filter{padding:8px 11px}.editorial{grid-template-columns:1fr}.editorial-image{height:330px;min-height:0}.newsletter{padding:40px 5%}.newsletter form{width:100%}}
 @media(max-width:380px){.brand-logo img{width:96px}.header-actions{gap:4px}.hero-premium{height:540px}.hero-premium h1{font-size:46px}.collection-card{height:165px}}
+
+/* Category campaign photography supplied by the store owner */
+.collection-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.collection-card{height:auto;aspect-ratio:1.72/1;padding:0;border-radius:10px;background-size:cover;background-position:center;overflow:hidden}
+.collection-card::before{display:none}
+.collection-men{background-image:url('assets/categories/hoodies.jpg')}
+.collection-casual{background-image:url('assets/categories/polos-tshirts.jpg')}
+.collection-formal{background-image:url('assets/categories/shirts.jpg')}
+.collection-shoes{background-image:url('assets/categories/trousers.jpg')}
+.collection-number,.collection-label{display:none}
+@media(max-width:900px){.collection-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.collection-card{height:auto;aspect-ratio:1.72/1}}
+@media(max-width:650px){.collection-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.collection-card,.collection-card:last-child{height:auto;aspect-ratio:1.45/1;grid-column:auto}}
+
+/* ===== Reference homepage composition: compact luxury editorial ===== */
+.announcement{min-height:24px;padding:5px 4%;font-size:8px}
+.site-header{height:54px;padding:0 4%;gap:16px}
+.brand-logo img{width:140px;height:48px}
+.main-nav{font-size:9px;gap:18px}
+.main-nav .nav-home{padding:7px 14px}
+.header-actions{gap:10px}.icon-btn{font-size:17px}.search-panel{top:54px}
+.hero-premium{height:clamp(260px,28vw,410px)}
+.hero-premium .hero-content{width:54%;padding:42px 0 25px 6.5%}
+.hero-premium .hero-kicker{margin-bottom:10px}.hero-premium .hero-index{display:none}
+.hero-premium h1{font-family:var(--serif);font-size:clamp(34px,4vw,58px);line-height:.98;letter-spacing:-.025em;margin-bottom:10px}
+.hero-premium .hero-copy{font-size:11px;line-height:1.5;margin-bottom:13px;max-width:300px}
+.hero-premium .button{min-height:30px;padding:0 17px;font-size:9px}
+.hero-premium .hero-secondary-link,.hero-bottom-note,.hero-image-topline,.hero-image-caption,.hero-image-stamp,.hero-side-label{display:none}
+.hero-premium .hero-image{background-position:center 34%;background-image:url('https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=2200&q=90')}
+.hero-assurance{padding:9px 4%;gap:10px;grid-template-columns:repeat(4,1fr)}
+.hero-assurance>div>span{font-size:17px}.hero-assurance strong{font-size:8px}.hero-assurance small{font-size:7px}.hero-assurance>a{font-size:8px}
+.section{padding:28px 4%}
+.collections{padding-top:8px;padding-bottom:16px}
+.collections .section-heading{margin:0 0 8px}.collections .section-heading>div{width:100%}
+.collections .section-heading .eyebrow{display:none}.collections .section-heading h2,.shop-section .section-heading h2,.best-sellers h2{font-family:var(--serif);font-size:18px;font-weight:700;letter-spacing:-.02em}
+.collection-grid{gap:8px}.collection-card{aspect-ratio:1.72/1;border-radius:6px}
+.collection-card::after{background:linear-gradient(0deg,rgba(0,0,0,.62),transparent 65%)}
+.collection-label{display:block;position:absolute;left:12px;bottom:10px;color:white;font-size:10px;font-weight:700;text-transform:none;letter-spacing:0}.collection-label b{display:none}.collection-number{display:none}
+.shop-section{padding-top:12px;padding-bottom:22px;background:#f5f1e9}
+.shop-section .section-heading{margin-bottom:8px;position:relative}.shop-section .section-heading .eyebrow{display:none}
+.shop-section .section-subtitle{font-size:8px;position:absolute;right:0;top:5px}
+.shop-toolbar{margin-bottom:10px}.filters{display:none}.shop-toolbar select{margin-left:auto;font-size:9px}
+.product-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.product-image-wrap{aspect-ratio:1/1.05;border-radius:5px}.product-info{padding:6px 3px}.product-name{font-size:9px}.product-price{font-size:9px}.quick-add{font-size:8px;padding:7px 6px}.product-badge{font-size:7px;padding:3px 6px}
+.editorial{padding:0 2% 14px;display:block;background:#f5f1e9}
+.editorial-image{min-height:0;height:auto;aspect-ratio:3.9/1;border-radius:2px;background-position:center;background-size:cover}
+.editorial-copy{display:none}
+.best-sellers{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(120px,.9fr);gap:12px;padding:8px 3% 18px;background:#f5f1e9;align-items:stretch}
+.best-sellers .section-heading{display:flex;justify-content:space-between;align-items:center;margin:0 0 8px}.best-sellers .section-heading h2{margin:0}.best-sellers .section-heading .text-link{font-size:8px}
+.best-sellers .product-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.best-sellers .product-image-wrap{aspect-ratio:1/1.1}.best-sellers .product-info{padding:5px 2px}.best-sellers .product-name,.best-sellers .product-price{font-size:8px}.best-sellers .quick-add{font-size:7px;padding:5px 2px}
+.quality-panel{min-height:100%;padding:18px 12px;display:flex;flex-direction:column;justify-content:center;gap:10px;color:#e7c38c;text-decoration:none;background:linear-gradient(0deg,rgba(10,9,7,.78),rgba(10,9,7,.55)),url('https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85') center/cover;border-radius:3px}
+.quality-panel span{font-family:var(--serif);font-size:clamp(14px,2vw,24px);line-height:1.05}.quality-panel small{font-size:8px;line-height:1.6;color:#f3eadb}.quality-panel b{font-size:8px;background:#e4b66e;color:#1b1711;border-radius:20px;padding:7px 10px;align-self:flex-start}
+.faq-section{padding:26px 4%}.faq-section .section-heading h2{font-size:20px}
+.newsletter{padding:17px 4%;display:flex;align-items:center;justify-content:space-between;gap:15px;background:#e9dfcf}.newsletter .eyebrow{display:none}.newsletter h2{font-size:16px;margin:0 0 3px}.newsletter p{font-size:8px;margin:0}.newsletter form{display:flex;gap:4px;max-width:55%}.newsletter input{min-width:0;padding:8px 10px;font-size:8px}.newsletter .button{padding:8px 12px;font-size:8px}
+footer{padding:22px 4% 14px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:12px;background:#171613;color:#eee5d7}footer .brand-footer img{width:135px;height:48px}footer>p{font-size:8px;grid-column:1;grid-row:2;margin-top:-10px}footer .footer-bottom{grid-column:1/-1;font-size:7px;padding-top:8px;border-top:1px solid #484238}footer .footer-email{font-size:8px}footer .trust-links{grid-column:2/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:6px}footer .trust-links a{font-size:8px;color:#d8cbb7}
+@media(max-width:700px){.announcement{font-size:7px;min-height:20px}.site-header{height:48px;padding:0 3%;gap:6px}.brand-logo img{width:102px;height:42px}.main-nav{display:none}.header-actions{gap:5px}.search-panel{top:48px}.hero-premium{height:300px}.hero-premium .hero-content{width:68%;padding:38px 0 20px 5%}.hero-premium h1{font-size:clamp(30px,8vw,43px)}.hero-premium .hero-copy{font-size:9px;max-width:210px}.hero-premium .hero-image-shade{background:linear-gradient(90deg,rgba(12,12,11,.84),rgba(12,12,11,.28))}.hero-assurance{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:8px 2%}.hero-assurance>div{gap:4px}.hero-assurance>div>span{font-size:14px}.hero-assurance strong{font-size:6px}.hero-assurance small{font-size:6px}.hero-assurance>a{font-size:6px}.section{padding:20px 3%}.collections{padding:8px 3% 12px}.collections .section-heading h2,.shop-section .section-heading h2,.best-sellers h2{font-size:15px}.collection-grid{gap:6px}.collection-card{aspect-ratio:1.72/1}.collection-label{left:7px;bottom:7px;font-size:8px}.shop-section{padding:10px 3% 16px}.product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 8px}.product-image-wrap{aspect-ratio:1/1.12}.product-name,.product-price{font-size:9px}.editorial{padding:0 2% 10px}.editorial-image{aspect-ratio:3.1/1}.best-sellers{grid-template-columns:minmax(0,1fr) 105px;gap:7px;padding:6px 2% 12px}.best-sellers .product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.best-sellers .product-card:nth-child(n+3){display:none}.quality-panel{padding:9px 7px;gap:7px}.quality-panel span{font-size:14px}.quality-panel small{font-size:6px}.quality-panel b{font-size:7px;padding:5px 7px}.newsletter{padding:14px 3%;display:block}.newsletter h2{font-size:14px}.newsletter form{max-width:100%;margin-top:9px}.newsletter input{flex:1}footer{grid-template-columns:1fr 1fr;gap:10px;padding:17px 3% 12px}footer .brand-footer img{width:120px}footer>p{grid-column:1;grid-row:auto;margin:0}footer .trust-links{grid-column:1/-1;grid-template-columns:repeat(2,1fr)}footer .footer-bottom{grid-column:1/-1}}
