@@ -383,3 +383,17 @@ footer{padding:55px 5.2% 28px}
 .site-image-upload-label{display:inline-flex;align-items:center;justify-content:center;padding:11px 12px;background:var(--ink);color:#fff;font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 .site-image-upload-label input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 @media(max-width:650px){.site-image-manager-grid{grid-template-columns:1fr}.site-image-preview{height:180px}}
+
+/* Show complete images in lower website blocks */
+.fabric-shot {
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-color: #eeece6;
+}
+
+/* Show complete uploaded image previews */
+.site-image-preview img {
+  object-fit: contain !important;
+}
+
