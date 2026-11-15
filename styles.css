@@ -372,3 +372,14 @@ footer{padding:55px 5.2% 28px}
 .care-reply-form textarea{width:100%;padding:12px;border:1px solid var(--line);background:#fff;font:12px/1.6 var(--sans);resize:vertical}
 .care-reply-form button{justify-self:start}
 @media(max-width:650px){.care-message{max-width:96%}.care-contact-links .button{flex:1;text-align:center}}
+
+
+/* NEXURE&LAND Admin Website Image Manager */
+.site-image-manager-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+.site-image-manager-card{min-width:0;padding:14px;background:#fff;border:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.site-image-manager-card>strong{font-size:12px;line-height:1.5}
+.site-image-preview{height:145px;background:#eeece6;display:flex;align-items:center;justify-content:center;overflow:hidden;color:var(--muted);font-size:11px}
+.site-image-preview img{width:100%;height:100%;object-fit:cover}
+.site-image-upload-label{display:inline-flex;align-items:center;justify-content:center;padding:11px 12px;background:var(--ink);color:#fff;font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.site-image-upload-label input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+@media(max-width:650px){.site-image-manager-grid{grid-template-columns:1fr}.site-image-preview{height:180px}}

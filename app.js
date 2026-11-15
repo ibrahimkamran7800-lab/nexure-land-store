@@ -24,6 +24,17 @@ function money(v){return new Intl.NumberFormat("en-PK",{style:"currency",currenc
 function makeId(prefix="nl"){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`}
 let products=read(STORE.products,null)||seedProducts,cart=read(STORE.cart,[]),wishlist=read(STORE.wishlist,[]),orders=read(STORE.orders,[]),customers=read(STORE.customers,[]);
 let authUser=null, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false,storeAdmin=false,adminCareRealtimeChannel=null;
+let siteImages={};
+const SITE_IMAGE_SLOTS=[
+ {key:"hero_main",label:"Main hero banner",selector:".hero-image"},
+ {key:"fabric_1",label:"Fabric gallery — image 1",selector:".fabric-shot-one"},
+ {key:"fabric_2",label:"Fabric gallery — image 2",selector:".fabric-shot-two"},
+ {key:"fabric_3",label:"Fabric gallery — image 3",selector:".fabric-shot-three"},
+ {key:"collection_men",label:"Men’s collection card",selector:".collection-men"},
+ {key:"collection_casual",label:"Casual collection card",selector:".collection-casual"},
+ {key:"collection_formal",label:"Formal collection card",selector:".collection-formal"},
+ {key:"editorial_main",label:"Our Story / editorial image",selector:".editorial-image"}
+];
 function toast(message){let el=$("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast-message";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600)}
 function currentCustomer(){return authUser?{name:authUser.user_metadata?.full_name||authUser.email?.split("@")[0]||"Customer",email:authUser.email||"",phone:authUser.user_metadata?.phone||""}:null}
 function saveAll(){write(STORE.products,products);write(STORE.cart,cart);write(STORE.wishlist,wishlist);write(STORE.orders,orders);write(STORE.customers,customers)}
@@ -198,7 +209,7 @@ async function loadAdminData(){
  orders=orderResult.data||[];customers=profileResult.data||[];
  adminStats();
 }
-function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");$("adminCarePanel").classList.toggle("hidden",view!=="care");renderAdminView();}
+function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");$("adminCarePanel").classList.toggle("hidden",view!=="care");$("adminImagesPanel").classList.toggle("hidden",view!=="images");renderAdminView();}
 async function renderAdminView(){
  if(!isStoreAdmin())return;
  try{await loadAdminData();}catch(error){
@@ -214,13 +225,14 @@ async function renderAdminView(){
   $("adminProductList").innerHTML=products.map(p=>`<div class="admin-row"><div><strong>${esc(p.name)}</strong><div class="small-note">${money(p.price)} · ${esc(p.category)} · Stock ${p.stock}</div></div><div class="admin-row-actions"><button class="button button-outline" type="button" data-edit="${esc(p.id)}">Edit</button><button class="button button-outline" type="button" data-delete="${esc(p.id)}">Delete</button></div></div>`).join("")||'<p class="small-note">No products yet. Add one above.</p>';
   $("adminProductList").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editProduct(b.dataset.edit));$("adminProductList").querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteProduct(b.dataset.delete));
  }else if(adminView==="orders"){
-  $("adminOrdersList").innerHTML=orders.length?orders.map(o=>{const delivered=String(o.status||"").toLowerCase()==="delivered";return `<article class="admin-view-card"><div class="order-preview-row"><strong>${esc(o.order_number||o.id)}</strong><span class="order-status">${esc(o.status||"pending")}</span>${delivered?`<button class="button button-outline" type="button" data-delete-order="${esc(o.id)}" aria-label="Permanently delete delivered order" title="Permanently delete order">✕</button>`:""}</div><p class="small-note">${esc(o.customer_name||"Customer")} · ${esc(o.customer_email||"")} · ${money(o.total_amount)}</p><p class="small-note">${esc(o.phone||"")} · ${esc(o.city||"")} · ${esc(o.payment_method||"")}</p><p class="small-note">${esc(o.shipping_address||"")}</p><p>${(o.order_items||[]).map(i=>`${esc(i.product_name)} × ${i.quantity} (${esc(i.size||"-" )}, ${esc(i.color||"-")})`).join("<br>")}</p><label class="admin-status-label">Update status<select data-status="${esc(o.id)}">${["pending","confirmed","processing","shipped","delivered","cancelled"].map(st=>`<option value="${st}" ${String(o.status).toLowerCase()===st?"selected":""}>${st[0].toUpperCase()+st.slice(1)}</option>`).join("")}</select></label></article>`}).join(""):'<div class="account-empty">No online orders yet.</div>';
+  $("adminOrdersList").innerHTML=orders.length?orders.map(o=>`<article class="admin-view-card"><div class="order-preview-row"><strong>${esc(o.order_number||o.id)}</strong><span class="order-status">${esc(o.status||"pending")}</span></div><p class="small-note">${esc(o.customer_name||"Customer")} · ${esc(o.customer_email||"")} · ${money(o.total_amount)}</p><p class="small-note">${esc(o.phone||"")} · ${esc(o.city||"")} · ${esc(o.payment_method||"")}</p><p class="small-note">${esc(o.shipping_address||"")}</p><p>${(o.order_items||[]).map(i=>`${esc(i.product_name)} × ${i.quantity} (${esc(i.size||"-" )}, ${esc(i.color||"-")})`).join("<br>")}</p><label class="admin-status-label">Update status<select data-status="${esc(o.id)}">${["pending","confirmed","processing","shipped","delivered","cancelled"].map(st=>`<option value="${st}" ${String(o.status).toLowerCase()===st?"selected":""}>${st[0].toUpperCase()+st.slice(1)}</option>`).join("")}</select></label></article>`).join(""):'<div class="account-empty">No online orders yet.</div>';
   $("adminOrdersList").querySelectorAll("[data-status]").forEach(sel=>sel.onchange=async()=>{sel.disabled=true;try{const {data,error}=await supabaseClient.from("orders").update({status:sel.value}).eq("id",sel.dataset.status).select("id,status").single();if(error)throw error;if(!data)throw new Error("No order was updated. Check admin permissions.");toast("Order status updated online.");await renderAdminView();}catch(error){toast("Could not update order: "+error.message);sel.disabled=false;}});
-  $("adminOrdersList").querySelectorAll("[data-delete-order]").forEach(btn=>btn.onclick=async()=>{const orderId=btn.dataset.deleteOrder;const order=orders.find(o=>String(o.id)===String(orderId));if(!order||String(order.status||"").toLowerCase()!=="delivered")return toast("Only delivered orders can be deleted.");if(!confirm(`Permanently delete order ${order.order_number||order.id}? This cannot be undone.`))return;btn.disabled=true;try{const {data,error}=await supabaseClient.from("orders").delete().eq("id",orderId).select("id");if(error)throw error;if(!data||!data.length)throw new Error("No order was deleted. Check admin delete permissions and order_items foreign-key settings.");toast("Delivered order permanently deleted.");await renderAdminView();}catch(error){console.error("Order delete failed:",error);toast("Could not delete order: "+(error.message||"Check Supabase permissions."));btn.disabled=false;}});
  }else if(adminView==="customers"){
   $("adminCustomersList").innerHTML=customers.length?customers.map(c=>`<article class="admin-view-card"><strong>${esc(c.full_name||"Customer")}</strong><p class="small-note">${esc(c.role||"customer")}</p><p class="small-note">${orders.filter(o=>o.user_id===c.id).length} order(s)</p></article>`).join(""):'<div class="account-empty">No customer profiles found.</div>';
  }else if(adminView==="care"){
   await renderAdminCareMessages();
+ }else if(adminView==="images"){
+  await renderSiteImageManager();
  }
 }
 async function renderAdminCareMessages(){
@@ -253,6 +265,55 @@ async function renderAdminCareMessages(){
   }));
  }catch(error){host.innerHTML=`<p class="small-note">Could not load Customer Care messages: ${esc(error.message||"Check the customer_care_messages table and its RLS policies.")}</p>`;}
 }
+async function loadSiteImages(){
+ if(!supabaseClient)return;
+ try{
+  const {data,error}=await supabaseClient.from("site_images").select("image_key,image_url");
+  if(error)throw error;
+  siteImages=Object.fromEntries((data||[]).map(row=>[row.image_key,row.image_url]));
+  SITE_IMAGE_SLOTS.forEach(slot=>applySiteImage(slot.key,siteImages[slot.key]));
+ }catch(error){console.warn("Site images could not be loaded. Run site-images-setup.sql first:",error.message);}
+}
+function applySiteImage(key,url){
+ if(!url)return;
+ const slot=SITE_IMAGE_SLOTS.find(item=>item.key===key);if(!slot)return;
+ const element=document.querySelector(slot.selector);if(!element)return;
+ const safeUrl=`url("${String(url).replace(/["\\]/g,"\\$&")}")`;
+ if(key==="hero_main")element.style.backgroundImage=`linear-gradient(145deg,rgba(23,23,21,.03),rgba(23,23,21,.15)),${safeUrl}`;
+ else if(key.startsWith("collection_"))element.style.backgroundImage=`linear-gradient(0deg,rgba(0,0,0,.45),transparent),${safeUrl}`;
+ else element.style.backgroundImage=safeUrl;
+}
+async function renderSiteImageManager(){
+ const host=$("adminImagesList");if(!host)return;
+ host.innerHTML='<p class="small-note">Loading your website pictures…</p>';
+ await loadSiteImages();
+ host.innerHTML='<p class="small-note">Choose a picture from your computer for each section. JPG, PNG or WEBP · maximum 5 MB per image.</p><div class="site-image-manager-grid">'+SITE_IMAGE_SLOTS.map(slot=>{
+  const url=siteImages[slot.key]||"";
+  return `<article class="site-image-manager-card"><strong>${esc(slot.label)}</strong><div class="site-image-preview">${url?`<img src="${esc(url)}" alt="${esc(slot.label)} preview">`:'<span>Current website picture</span>'}</div><label class="site-image-upload-label">Choose new picture<input type="file" accept="image/jpeg,image/png,image/webp" data-site-image="${esc(slot.key)}"></label><small class="small-note" data-image-status="${esc(slot.key)}">${url?"Custom picture is active":"Using the default picture"}</small></article>`;
+ }).join('')+'</div>';
+ host.querySelectorAll('[data-site-image]').forEach(input=>input.addEventListener('change',async()=>{
+  const file=input.files?.[0],key=input.dataset.siteImage;if(!file)return;
+  const status=host.querySelector(`[data-image-status="${key}"]`);input.disabled=true;if(status)status.textContent="Uploading picture…";
+  try{await uploadSiteImage(key,file);if(status)status.textContent="Picture updated successfully.";await renderSiteImageManager();toast("Website picture updated.");}
+  catch(error){console.error("Site image upload failed:",error);if(status)status.textContent="Could not upload: "+(error.message||"Please try again.");toast("Picture upload failed: "+(error.message||"Check setup."));input.disabled=false;}
+ }));
+}
+async function uploadSiteImage(key,file){
+ if(!supabaseClient||!authUser||!isStoreAdmin())throw new Error("Admin sign-in is required.");
+ if(!SITE_IMAGE_SLOTS.some(slot=>slot.key===key))throw new Error("Unknown website image section.");
+ if(!["image/jpeg","image/png","image/webp"].includes(file.type))throw new Error("Choose a JPG, PNG or WEBP image.");
+ if(file.size>5*1024*1024)throw new Error("Image must be smaller than 5 MB.");
+ const ext=file.type==="image/png"?"png":file.type==="image/webp"?"webp":"jpg";
+ const path=`${key}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+ const {error:uploadError}=await supabaseClient.storage.from("site-images").upload(path,file,{cacheControl:"3600",contentType:file.type,upsert:false});
+ if(uploadError)throw uploadError;
+ const {data}=supabaseClient.storage.from("site-images").getPublicUrl(path);
+ if(!data?.publicUrl)throw new Error("Could not create a public image link.");
+ const {error:saveError}=await supabaseClient.from("site_images").upsert({image_key:key,image_url:data.publicUrl,updated_at:new Date().toISOString()},{onConflict:"image_key"});
+ if(saveError)throw saveError;
+ siteImages[key]=data.publicUrl;applySiteImage(key,data.publicUrl);
+}
+
 function resetProductForm(){const f=$("productForm");f.reset();f.elements.id.value="";$("saveProductBtn").textContent="Add product";$("productFormMessage").textContent=""}
 function editProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;const f=$("productForm");["id","name","price","stock","category","description","image_url"].forEach(k=>{if(f.elements[k])f.elements[k].value=p[k]??""});$("saveProductBtn").textContent="Update product";$("productFormMessage").textContent="Editing an online catalogue product.";f.scrollIntoView({behavior:"smooth",block:"center"})}
 async function deleteProduct(id){
@@ -381,6 +442,7 @@ async function setup(){
 
  // Product loading happens only after the auth recovery listener is active.
  await loadSupabaseProducts();
+ await loadSiteImages();
  $("bagBtn").onclick=openBag;$("wishlistBtn").onclick=openWishlist;$("checkoutBtn").onclick=()=>{if(!authUser){openCustomer();return toast("Sign in to continue with your online bag.");}if(!cart.length)return toast("Add a product to your bag first.");closeAll();resetCheckout();$("checkoutTotal").textContent=money(subtotal());$("checkoutModal").classList.remove("hidden");$("overlay").classList.remove("hidden");document.body.classList.add("no-scroll")};
  $("searchToggle").onclick=()=>{$("searchPanel").classList.toggle("hidden");if(!$("searchPanel").classList.contains("hidden"))$("searchInput").focus()};
  $("searchClose").onclick=()=>{$("searchPanel").classList.add("hidden");$("searchInput").value="";searchTerm="";renderProducts()};
