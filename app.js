@@ -114,7 +114,13 @@ async function loadSupabaseProducts(){
  }
 }
 function renderProducts(){
- let list=products.filter(p=>(activeCategory==="All"||(activeCategory==="Sale"?productPrice(p)<Number(p.price):String(p.category).toLowerCase()===activeCategory.toLowerCase()))&&(`${p.name} ${p.category} ${p.description||""}`).toLowerCase().includes(searchTerm.toLowerCase()));
+ let list=products.filter(p=>{
+ const onSale=productPrice(p)<Number(p.price);
+ const categoryMatch=activeCategory==="Sale"
+  ? onSale
+  : !onSale&&(activeCategory==="All"||String(p.category).toLowerCase()===activeCategory.toLowerCase());
+ return categoryMatch&&(`${p.name} ${p.category} ${p.description||""}`).toLowerCase().includes(searchTerm.toLowerCase());
+});
  const sort=$("sortSelect").value;if(sort==="low")list.sort((a,b)=>productPrice(a)-productPrice(b));if(sort==="high")list.sort((a,b)=>productPrice(b)-productPrice(a));
  $("productGrid").innerHTML=list.length?list.map(p=>{const saved=wishlist.some(x=>String(x)===String(p.id)),online=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(p.id)),sold=Number(p.stock)<=0||!online;return `<article class="product-card"><div class="product-image-wrap" data-details="${esc(p.id)}" role="button" tabindex="0" aria-label="View ${esc(p.name)}"><img class="product-image" src="${esc(p.image_url||"")}" alt="${esc(p.name)}" loading="lazy"><span class="product-badge">${sold?"Sold out":(productPrice(p)<Number(p.price)?"SALE":"N&L EDIT")}</span><button class="wishlist-heart ${saved?"is-saved":""}" type="button" data-wish="${esc(p.id)}" aria-label="${saved?"Remove from":"Add to"} wishlist: ${esc(p.name)}" aria-pressed="${saved}">${saved?"♥":"♡"}</button></div><div class="product-info"><div class="product-category">${esc(p.category||"Collection")}</div><h3 class="product-name">${esc(p.name)}</h3><span class="product-price">${productPrice(p)<Number(p.price)?`<del>${money(p.price)}</del> <strong>${money(productPrice(p))}</strong>`:money(p.price)}</span><span class="stock-label">${sold?"Currently unavailable":`${p.stock} available`}</span><div class="product-actions"><button type="button" data-details="${esc(p.id)}">Quick view</button></div><button class="quick-add" type="button" data-add="${esc(p.id)}" ${sold?"disabled":""}>${sold?"Sold out":"Add to bag +"}</button></div></article>`}).join(""):'<div class="empty-state">No products found. Try another category or search.</div>';
  $("productGrid").querySelectorAll("img").forEach(img=>img.addEventListener("error",()=>{img.onerror=null;img.src="https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=700&q=80"}));
@@ -509,4 +515,4 @@ async function setup(){
  $("newsletterForm").onsubmit=e=>{e.preventDefault();const input=e.currentTarget.querySelector('input[type="email"]'),email=input.value.trim().toLowerCase(),list=read(STORE.newsletter,[]);if(!list.includes(email)){list.push(email);write(STORE.newsletter,list)}e.currentTarget.reset();toast("Thanks for joining the N&L demo list.")};
  renderProducts();renderCart();renderWishlist();renderCustomerModal();if(customerRecoveryMode){showPasswordRecovery();}else{setCustomerMode("signin");}adminStats();resetProductForm();
 }
-document.addEventListener("DOMContentLoaded",setup);
+document.addEventListener("DOMContentLoaded",setup);a
