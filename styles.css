@@ -1098,3 +1098,113 @@ footer{padding:22px 4% 14px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr
   .header-actions .bag-btn { padding-left: 4px !important; padding-right: 4px !important; gap: 3px !important; }
   .header-actions .signin-account-btn { min-width: 38px !important; padding-left: 3px !important; padding-right: 3px !important; }
 }
+
+/* MOBILE BEST SELLERS REPAIR — stack the quality artwork below the products */
+@media (max-width: 700px) {
+  .best-sellers {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px !important;
+    width: 100% !important;
+    padding: 18px 12px 20px !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  .best-seller-products {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .best-seller-heading {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    column-gap: 10px !important;
+    row-gap: 10px !important;
+    margin: 0 0 14px !important;
+  }
+  .best-seller-heading h2 {
+    grid-column: 1 / -1 !important;
+    margin: 0 !important;
+    text-align: center !important;
+    font-size: 19px !important;
+  }
+  .best-seller-heading .best-seller-action {
+    justify-self: start !important;
+    padding: 9px 13px !important;
+    font-size: 10px !important;
+  }
+  .best-seller-heading .text-link {
+    justify-self: end !important;
+    margin: 0 !important;
+    font-size: 10px !important;
+  }
+  .best-sellers .product-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px 10px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .best-sellers .product-card {
+    display: flex !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  .best-sellers .product-image-wrap {
+    width: 100% !important;
+    aspect-ratio: 1 / 1.12 !important;
+    overflow: hidden !important;
+  }
+  .best-sellers .product-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+  .best-sellers .product-name,
+  .best-sellers .product-price {
+    font-size: 10px !important;
+    line-height: 1.45 !important;
+  }
+  .best-sellers .product-category { font-size: 8px !important; }
+  .best-sellers .quick-add { font-size: 9px !important; padding: 8px 5px !important; }
+  .best-sellers .quality-panel {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    aspect-ratio: 641 / 427 !important;
+    overflow: hidden !important;
+    background: #100d09 !important;
+  }
+  .best-sellers .quality-panel img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    object-fit: contain !important;
+    object-position: center !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .best-sellers { padding-left: 10px !important; padding-right: 10px !important; }
+  .best-sellers .product-grid { gap: 12px 8px !important; }
+  .best-seller-heading h2 { font-size: 17px !important; }
+  .best-seller-heading .best-seller-action { padding: 8px 10px !important; font-size: 9px !important; }
+}
+
+
+/* REMOVE QUALITY IN EVERY DETAIL SIDE BANNER — desktop and mobile */
+.best-sellers {
+  display: block !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.best-seller-products {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
