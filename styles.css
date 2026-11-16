@@ -857,3 +857,6 @@ footer{padding:22px 4% 14px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr
 .best-seller-action{appearance:none;border:1px solid var(--ink);background:transparent;color:var(--ink);padding:10px 18px;font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:background .2s,color .2s}
 .best-seller-action:hover{background:var(--ink);color:#fff}
 @media(max-width:600px){.best-seller-heading{gap:12px}.best-seller-action{padding:8px 12px}.best-seller-heading .text-link{margin-left:auto}}
+/* Admin delivered-orders section */
+.delivered-orders-heading{margin:28px 0 10px;padding-top:18px;border-top:1px solid var(--line)}
+#adminOrdersList [data-delete-delivered]{margin-top:10px;color:#8b1e1e;border-color:#d9b5b5}
