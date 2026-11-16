@@ -407,7 +407,8 @@ async function checkout(e){
  const email=f.elements.email.value.trim().toLowerCase();
  if(!name||!phone||!address||!city||!email)return toast("Please complete all checkout fields.");
  if(email!==(authUser.email||"").toLowerCase())return toast("Use the same email address as your signed-in account.");
- const items=cart.map(i=>({id:String(i.id),qty:Number(i.qty),size:i.size||"M",color:i.color||"Black"}));
+ const orderCartSnapshot=cart.map(i=>({...i}));
+ const items=orderCartSnapshot.map(i=>({id:String(i.id),qty:Number(i.qty),size:i.size||"M",color:i.color||"Black"}));
  if(items.some(i=>!i.id||!Number.isInteger(i.qty)||i.qty<1))return toast("Your bag contains an invalid item. Please refresh and try again.");
  btn.disabled=true;const oldText=btn.textContent;btn.textContent="PLACING ORDER…";
  try{
@@ -425,8 +426,25 @@ async function checkout(e){
   cart=[];write(STORE.cart,cart);renderCart();
   await loadSupabaseProducts();renderProducts();
   await renderCustomerView("orders");
+  const orderNumber=data.order_number||data.id;
+  const paymentMethod=paymentLabels[f.elements.payment.value]||"Cash on Delivery";
+  const productLines=orderCartSnapshot.map((item,index)=>`${index+1}. ${item.name} | Qty: ${item.qty} | Size: ${item.size||"M"} | Color: ${item.color||"Black"} | ${money(Number(item.price||0)*Number(item.qty||0))}`).join("\n");
+  const whatsappMessage=[
+   "Assalam-o-Alaikum NEXURE&LAND! I have placed an order.",
+   `Order ID: ${orderNumber}`,
+   `Customer: ${name}`,
+   `Email: ${email}`,
+   `Phone/WhatsApp: ${phone}`,
+   `Delivery Address: ${address}`,
+   `City: ${city}`,
+   "Products:",productLines,
+   `Total: ${money(data.total)}`,
+   `Payment Method: ${paymentMethod}`,
+   "Please confirm my order."
+  ].join("\n");
+  const whatsappUrl=`https://wa.me/923170917527?text=${encodeURIComponent(whatsappMessage)}`;
   $("checkoutResult").classList.remove("hidden");
-  $("checkoutResult").innerHTML=`<strong>Order ${esc(data.order_number||data.id)} placed successfully.</strong><br>Total: ${money(data.total)} · Status: Pending.<br>Payment method: ${esc(paymentLabels[f.elements.payment.value]||"Cash on Delivery")}. Payment is not processed online; our team will confirm manual payment details.${esc(cartClearWarning)}`;
+  $("checkoutResult").innerHTML=`<strong>Order ${esc(orderNumber)} placed successfully.</strong><br>Total: ${money(data.total)} · Status: Pending.<br>Payment method: ${esc(paymentMethod)}. Payment is not processed online; our team will confirm manual payment details.${esc(cartClearWarning)}<br><br><a class="button button-dark full" href="${whatsappUrl}" target="_blank" rel="noopener noreferrer">Continue to WhatsApp ↗</a><p class="small-note">Your order is already saved. Tap the button to open WhatsApp with your order details ready to send.</p>`;
   f.classList.add("hidden");$("checkoutModal").querySelector("h2").textContent="Order placed";
   toast("Your order has been saved online.");
  }catch(error){console.error("Online checkout failed:",error);toast("Order could not be placed: "+(error.message||"Please try again."));}
