@@ -27,14 +27,11 @@ let products=read(STORE.products,null)||seedProducts,cart=read(STORE.cart,[]),wi
 let authUser=null, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false,storeAdmin=false,adminCareRealtimeChannel=null;
 let siteImages={};
 const SITE_IMAGE_SLOTS=[
- {key:"hero_main",label:"Main hero banner",selector:".hero-image"},
- {key:"fabric_1",label:"Fabric gallery — image 1",selector:".fabric-shot-one"},
- {key:"fabric_2",label:"Fabric gallery — image 2",selector:".fabric-shot-two"},
- {key:"fabric_3",label:"Fabric gallery — image 3",selector:".fabric-shot-three"},
+ {key:"hero_main",label:"Main hero banner",selector:".hero-premium"},
  {key:"collection_men",label:"Men’s collection card",selector:".collection-men"},
  {key:"collection_casual",label:"Casual collection card",selector:".collection-casual"},
  {key:"collection_formal",label:"Formal collection card",selector:".collection-formal"},
- {key:"editorial_main",label:"Our Story / editorial image",selector:".editorial-image"}
+ {key:"editorial_main",label:"Our Story / editorial image",selector:".editorial"}
 ];
 function toast(message){let el=$("toast");if(!el){el=document.createElement("div");el.id="toast";el.className="toast-message";el.setAttribute("role","status");document.body.appendChild(el)}el.textContent=message;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2600)}
 function currentCustomer(){return authUser?{name:authUser.user_metadata?.full_name||authUser.email?.split("@")[0]||"Customer",email:authUser.email||"",phone:authUser.user_metadata?.phone||""}:null}
@@ -533,7 +530,20 @@ async function setup(){
  $("adminFooter").onclick=async e=>{e.preventDefault();if(!authUser){toast("Please sign in with the admin account first.");openCustomer();return;}if(!await refreshAdminRole()){toast("This account is not authorised as a store admin.");return;}setAdminView("products");openModal("adminModal")};
  document.querySelectorAll("[data-admin-view]").forEach(b=>b.onclick=()=>setAdminView(b.dataset.adminView));
  $("productForm").onsubmit=saveProduct;$("resetProductBtn").onclick=resetProductForm;
- $("newsletterForm").onsubmit=e=>{e.preventDefault();const input=e.currentTarget.querySelector('input[type="email"]'),email=input.value.trim().toLowerCase(),list=read(STORE.newsletter,[]);if(!list.includes(email)){list.push(email);write(STORE.newsletter,list)}e.currentTarget.reset();toast("Thanks for joining the N&L demo list.")};
+ $("newsletterForm").onsubmit=async e=>{
+  e.preventDefault();
+  const form=e.currentTarget,input=form.querySelector('input[type="email"]'),button=form.querySelector('button[type="submit"]'),email=input.value.trim().toLowerCase(),message=$("newsletterMessage");
+  message.textContent="";
+  if(!email||!input.checkValidity()){input.reportValidity();return;}
+  if(!supabaseClient){message.textContent="Subscription is temporarily unavailable. Please try again later.";toast("Newsletter service is unavailable.");return;}
+  const original=button.textContent;button.disabled=true;button.textContent="PLEASE WAIT…";
+  try{
+   const {error}=await supabaseClient.from("newsletter_subscribers").insert({email});
+   if(error){if(error.code==="23505"){message.textContent="This email is already subscribed. Thank you!";toast("This email is already subscribed.");return;}throw error;}
+   form.reset();message.textContent="Thank you! You are subscribed to NEXURE&LAND clothing updates.";toast("Thanks for subscribing to NEXURE&LAND updates.");
+  }catch(err){console.error("Newsletter subscription failed:",err);message.textContent="We could not save your email. Please try again in a moment.";toast("Subscription failed. Please try again.");}
+  finally{button.disabled=false;button.textContent=original;}
+ };
  renderProducts();renderCart();renderWishlist();renderCustomerModal();if(customerRecoveryMode){showPasswordRecovery();}else{setCustomerMode("signin");}adminStats();resetProductForm();
 }
-document.addEventListener("DOMContentLoaded",setup);a
+document.addEventListener("DOMContentLoaded",setup);

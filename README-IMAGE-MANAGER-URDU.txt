@@ -8,7 +8,6 @@ NEXURE&LAND WEBSITE IMAGE MANAGER — SETUP (Roman Urdu)
 
 Available picture slots:
 - Main hero banner
-- Fabric gallery image 1, 2, 3
 - Men’s collection card
 - Casual collection card
 - Formal collection card
