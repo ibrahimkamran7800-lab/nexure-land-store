@@ -226,7 +226,7 @@ async function loadAdminData(){
  orders=orderResult.data||[];customers=profileResult.data||[];
  adminStats();
 }
-function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");$("adminCarePanel").classList.toggle("hidden",view!=="care");$("adminImagesPanel").classList.toggle("hidden",view!=="images");$("adminNewsletterPanel").classList.toggle("hidden",view!=="newsletter");renderAdminView();}
+function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");$("adminCarePanel").classList.toggle("hidden",view!=="care");$("adminImagesPanel").classList.toggle("hidden",view!=="images");$("adminNewsletterPanel").classList.toggle("hidden",view!=="newsletter");$("adminAccessPanel").classList.toggle("hidden",view!=="access");renderAdminView();}
 async function renderAdminView(){
  if(!isStoreAdmin())return;
  try{await loadAdminData();}catch(error){
@@ -237,6 +237,7 @@ async function renderAdminView(){
   else if(adminView==="customers")$("adminCustomersList").innerHTML=message;
   else if(adminView==="care")$("adminCareMessages").innerHTML=message;
   else if(adminView==="newsletter")$("adminNewsletterList").innerHTML=message;
+  else if(adminView==="access")$("adminAccessManager").innerHTML=message;
   return;
  }
  if(adminView==="products"){
@@ -253,8 +254,28 @@ async function renderAdminView(){
   await renderSiteImageManager();
  }else if(adminView==="newsletter"){
   await renderAdminNewsletter();
+ }else if(adminView==="access"){
+  renderAdminAccessManager();
  }
 }
+
+function renderAdminAccessManager(){
+ const host=$("adminAccessManager");if(!host||!isStoreAdmin())return;
+ const candidates=customers.filter(c=>String(c.id)!==String(authUser.id));
+ host.innerHTML=`<p class="small-note">Only an already-authorised Admin can change another registered account's role. Customers cannot see this panel or grant themselves access.</p>`+(
+  candidates.length?`<form id="adminAccessForm" class="form-grid"><label class="span-2">Registered customer account<select name="user_id" required><option value="">Select an account</option>${candidates.map(c=>`<option value="${esc(c.id)}">${esc(c.full_name||"Customer")} · ${esc(c.role||"customer")} · ${esc(String(c.id).slice(0,8))}</option>`).join("")}</select></label><label class="span-2">Set access level<select name="role" required><option value="admin">Admin access</option><option value="customer">Customer access</option></select></label><div class="span-2"><button class="button button-dark" type="submit">Save account access</button></div><p class="span-2 small-note" id="adminAccessMessage" aria-live="polite"></p></form>`:'<div class="account-empty">No other registered customer profiles are available yet. Ask the person to create a normal Customer account first.</div>');
+ const form=$("adminAccessForm");if(form)form.onsubmit=async e=>{
+  e.preventDefault();if(!isStoreAdmin()){toast("Admin access is required.");return;}
+  const userId=form.elements.user_id.value,role=form.elements.role.value,button=form.querySelector('button[type="submit"]'),message=$("adminAccessMessage");
+  if(!userId||!['admin','customer'].includes(role)){message.textContent="Select a valid account and access level.";return;}
+  if(userId===authUser.id){message.textContent="You cannot change your own access from this screen.";return;}
+  button.disabled=true;message.textContent="Saving access securely…";
+  try{const {data,error}=await supabaseClient.rpc("admin_set_profile_role",{p_user_id:userId,p_role:role});if(error)throw error;if(data!==true)throw new Error("The database did not confirm the access change.");message.textContent=role==="admin"?"Admin access granted to the selected registered account.":"Admin access removed; this account is now a Customer.";toast("Account access updated.");await renderAdminView();}
+  catch(error){console.error("Admin role update failed:",error);message.textContent=error.message||"Could not update access. Run the Admin Access SQL setup first.";}
+  finally{button.disabled=false;}
+ };
+}
+
 async function renderAdminNewsletter(){
  const host=$("adminNewsletterList");if(!host)return;
  host.innerHTML='<p class="small-note">Loading newsletter subscribers…</p>';
