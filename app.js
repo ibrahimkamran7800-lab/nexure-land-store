@@ -7,14 +7,14 @@ const SUPABASE_URL = "https://dllqxqwfzzearcywhvxu.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ehnNF5KFVivvAanoeIinag_a1VSwvvb";
 const supabaseClient = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
 const seedProducts = [
-{id:"demo1",name:"Classic Oxford Shirt",price:3990,category:"Men",image_url:"https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=900&q=85",description:"A clean Oxford shirt for smart everyday wear.",stock:12},
-{id:"demo2",name:"Premium Cotton T-Shirt",price:2190,category:"Men",image_url:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85",description:"Soft cotton with a modern, relaxed fit.",stock:20},
+{id:"demo1",name:"Classic Oxford Shirt",price:3990,category:"Shirts",image_url:"https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=900&q=85",description:"A clean Oxford shirt for smart everyday wear.",stock:12},
+{id:"demo2",name:"Premium Cotton T-Shirt",price:2190,category:"Shirts",image_url:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85",description:"Soft cotton with a modern, relaxed fit.",stock:20},
 {id:"demo3",name:"Men's Casual Overshirt",price:4590,category:"Casual",image_url:"https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=900&q=85",description:"A versatile layer for everyday outfits.",stock:8},
 {id:"demo4",name:"Slim Fit Black Trousers",price:4990,category:"Formal",image_url:"https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=900&q=85",description:"Tailored trousers with a sharp silhouette.",stock:14},
-{id:"demo5",name:"Relaxed Fit Denim Jeans",price:5290,category:"Men",image_url:"https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=900&q=85",description:"Easy denim for daily wear.",stock:6},
+{id:"demo5",name:"Relaxed Fit Denim Jeans",price:5290,category:"Shirts",image_url:"https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=900&q=85",description:"Easy denim for daily wear.",stock:6},
 {id:"demo6",name:"Men's Minimal Hoodie",price:4290,category:"Casual",image_url:"https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85",description:"A comfortable layer with a clean look.",stock:5},
 {id:"demo7",name:"Formal White Shirt",price:3790,category:"Formal",image_url:"https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=900&q=85",description:"A crisp shirt for formal occasions.",stock:10},
-{id:"demo8",name:"Men's Polo Shirt",price:3290,category:"Men",image_url:"https://images.unsplash.com/photo-1625910513413-5fc2c2f7f8b5?auto=format&fit=crop&w=900&q=85",description:"A polished casual staple.",stock:11},
+{id:"demo8",name:"Men's Polo Shirt",price:3290,category:"Shirts",image_url:"https://images.unsplash.com/photo-1625910513413-5fc2c2f7f8b5?auto=format&fit=crop&w=900&q=85",description:"A polished casual staple.",stock:11},
 {id:"shoe1",name:"Men's Everyday Sneakers",price:5990,category:"Shoes",image_url:"https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=85",description:"Comfortable sneakers for everyday movement.",stock:12}
 ];
 function read(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fallback}catch{return fallback}}
@@ -23,7 +23,7 @@ function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt
 function productPrice(p){const sale=Number(p?.sale_price);return sale>0&&sale<Number(p?.price)?sale:(Number(p?.price)||0)}
 function money(v){return new Intl.NumberFormat("en-PK",{style:"currency",currency:"PKR",maximumFractionDigits:0}).format(Number(v)||0)}
 function makeId(prefix="nl"){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`}
-let products=read(STORE.products,null)||seedProducts,cart=read(STORE.cart,[]),wishlist=read(STORE.wishlist,[]),orders=read(STORE.orders,[]),customers=read(STORE.customers,[]);
+let products=(read(STORE.products,null)||seedProducts).map(p=>({...p,category:p.category==="Men"?"Shirts":(p.category||"Shirts")})),cart=read(STORE.cart,[]),wishlist=read(STORE.wishlist,[]),orders=read(STORE.orders,[]),customers=read(STORE.customers,[]);
 let authUser=null, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false,storeAdmin=false,adminCareRealtimeChannel=null;
 let siteImages={};
 const SITE_IMAGE_SLOTS=[
@@ -95,7 +95,7 @@ async function loadSupabaseProducts(){
     price:Number(p.price)||0,
     sale_price:p.sale_price==null?null:Number(p.sale_price),
     is_best_seller:p.is_best_seller===true,
-    category:p.category||"Men",
+    category:(p.category==="Men"?"Shirts":(p.category||"Shirts")),
     image_url:p.image_url||"",
     description:p.description||"",
     stock:Number(p.stock??p.quantity??99)
@@ -461,11 +461,11 @@ async function checkout(e){
    "Products:",productLines,
    `Total: ${money(data.total)}`,
    `Payment Method: ${paymentMethod}`,
-   "Please confirm my order."
+   (f.elements.payment.value==="easypaisa"||f.elements.payment.value==="jazzcash")?"Please contact the Owner on WhatsApp to confirm payment details. I will pay only after speaking with the Owner and receiving confirmation.":"Please confirm my order."
   ].join("\n");
   const whatsappUrl=`https://wa.me/923170917527?text=${encodeURIComponent(whatsappMessage)}`;
   $("checkoutResult").classList.remove("hidden");
-  $("checkoutResult").innerHTML=`<strong>Order ${esc(orderNumber)} placed successfully.</strong><br>Total: ${money(data.total)} · Status: Pending.<br>Payment method: ${esc(paymentMethod)}. Payment is not processed online; our team will confirm manual payment details.${esc(cartClearWarning)}<br><br><a class="button button-dark full" href="${whatsappUrl}" target="_blank" rel="noopener noreferrer">Continue to WhatsApp ↗</a><p class="small-note">Your order is already saved. Tap the button to open WhatsApp with your order details ready to send.</p>`;
+  $("checkoutResult").innerHTML=`<strong>Order ${esc(orderNumber)} placed successfully.</strong><br>Total: ${money(data.total)} · Status: Pending.<br>Payment method: ${esc(paymentMethod)}. Payment is not processed online. For EasyPaisa/JazzCash, payment options will be available after the store confirms the payment details with you via WhatsApp. Please do not make any payment before confirmation.${esc(cartClearWarning)}<br><br><a class="button button-dark full" href="${whatsappUrl}" target="_blank" rel="noopener noreferrer">Continue to WhatsApp ↗</a><p class="small-note">Your order is already saved. Tap the button to open WhatsApp with your order details ready to send.</p>`;
   f.classList.add("hidden");$("checkoutModal").querySelector("h2").textContent="Order placed";
   toast("Your order has been saved online.");
  }catch(error){console.error("Online checkout failed:",error);toast("Order could not be placed: "+(error.message||"Please try again."));}

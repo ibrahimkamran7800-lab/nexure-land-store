@@ -49,10 +49,10 @@
     <section class="collections section" id="collections">
       <div class="section-heading"><div><p class="eyebrow"> </p><h2>Shop by Category</h2></div><a class="text-link" href="#shop">Shop all ↗</a></div>
       <div class="collection-grid">
-        <button class="collection-card collection-men" data-category="Men" aria-label="Hoodies"><span class="collection-number">01</span><span class="collection-label">HOODIES <b>↗</b></span></button>
+        <button class="collection-card collection-men" data-category="Shirts" aria-label="Hoodies"><span class="collection-number">01</span><span class="collection-label">HOODIES <b>↗</b></span></button>
         <button class="collection-card collection-casual" data-category="Casual" aria-label="Polos and T-shirts"><span class="collection-number">02</span><span class="collection-label">POLOS & T-SHIRTS <b>↗</b></span></button>
         <button class="collection-card collection-formal" data-category="Formal" aria-label="Shirts"><span class="collection-number">03</span><span class="collection-label">SHIRTS <b>↗</b></span></button>
-        <button class="collection-card collection-shoes" data-category="Men" aria-label="Trousers"><span class="collection-number">04</span><span class="collection-label">TROUSERS <b>↗</b></span></button>
+        <button class="collection-card collection-shoes" data-category="Pants" aria-label="Trousers"><span class="collection-number">04</span><span class="collection-label">TROUSERS <b>↗</b></span></button>
       </div>
     </section>
 
@@ -132,7 +132,7 @@
         <label>City<input name="city" required></label>
         <label>Payment method<select name="payment" id="paymentMethod"><option value="cod">Cash on Delivery (COD)</option><option value="easypaisa">EasyPaisa (manual payment)</option><option value="jazzcash">JazzCash (manual payment)</option></select></label>
         <div class="span-2 checkout-total"><span>Order total</span><strong id="checkoutTotal">Rs. 0</strong></div>
-        <p class="span-2 small-note" id="paymentNote">COD, EasyPaisa, or JazzCash: our team will confirm payment details with you.</p>
+        <p class="span-2 small-note" id="paymentNote">Payment options will be available after the store confirms the payment details with you via WhatsApp. Please do not make any payment before confirmation.</p>
         <button class="button button-dark full span-2" type="submit">Place order ↗</button>
       </form>
       <div id="checkoutResult" class="notice hidden"></div>
@@ -168,7 +168,7 @@
           <label>Regular price (PKR)<input name="price" type="number" min="1" step="1" required></label>
           <label>Sale price (PKR, optional)<input name="sale_price" type="number" min="1" step="1" placeholder="Leave empty if not on sale"></label>
           <label>Stock quantity<input name="stock" type="number" min="0" step="1" value="0" required></label>
-          <label>Category<select name="category"><option>Men</option><option>Shoes</option><option>Pants</option><option>Shirts</option><option>Best Sellers</option></select></label>
+          <label>Category<select name="category"><option>Shoes</option><option>Pants</option><option>Shirts</option><option>Best Sellers</option></select></label>
           <label>Product image<input name="image" type="file" accept="image/png,image/jpeg,image/webp"></label>
           <label class="span-2">Image URL (optional)<input name="image_url" type="url" placeholder="https://..."></label>
           <label class="span-2">Description<textarea name="description" rows="3" maxlength="500" placeholder="Describe the product"></textarea></label>
@@ -267,9 +267,9 @@
     <h2>Payment Methods</h2>
     <div class="payment-methods-list">
       <p><strong>Cash on Delivery (COD)</strong> — Pay when your order arrives.</p>
-      <p><strong>EasyPaisa</strong> — Payment option available after store confirms payment details.</p>
-      <p><strong>JazzCash</strong> — Payment option available after store confirms payment details.</p>
-      <p class="payment-note">For EasyPaisa and JazzCash, please contact us to confirm the official payment instructions. Call/WhatsApp: 03170917527. This website does not yet process online payments automatically.</p>
+      <p><strong>EasyPaisa</strong> — Payment options will be available after the store confirms the payment details with you via WhatsApp.</p>
+      <p><strong>JazzCash</strong> — Payment options will be available after the store confirms the payment details with you via WhatsApp.</p>
+      <p class="payment-note">For EasyPaisa and JazzCash, place your order first. Payment options will be available after the store confirms the payment details with you via WhatsApp. Please do not make any payment before confirmation. Online payments are not processed automatically by this website.</p>
     </div>
   </section>
   <section id="contact-us">
