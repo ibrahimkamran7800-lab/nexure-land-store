@@ -38,3 +38,20 @@ with check (
 
 -- No public SELECT, UPDATE, or DELETE policy is created.
 -- View/manage subscriber addresses only from the trusted Supabase dashboard.
+
+
+-- Allow only signed-in store admins to view subscriber addresses in the Admin Panel.
+-- Public/anonymous visitors still cannot read the subscriber list.
+drop policy if exists "Store admins can view newsletter subscribers" on public.newsletter_subscribers;
+create policy "Store admins can view newsletter subscribers"
+on public.newsletter_subscribers
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.profiles p
+    where p.id = auth.uid()
+      and p.role = 'admin'
+  )
+);

@@ -226,7 +226,7 @@ async function loadAdminData(){
  orders=orderResult.data||[];customers=profileResult.data||[];
  adminStats();
 }
-function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");$("adminCarePanel").classList.toggle("hidden",view!=="care");$("adminImagesPanel").classList.toggle("hidden",view!=="images");renderAdminView();}
+function setAdminView(view){adminView=view;document.querySelectorAll("[data-admin-view]").forEach(b=>b.classList.toggle("active",b.dataset.adminView===view));$("adminProductsPanel").classList.toggle("hidden",view!=="products");$("adminOrdersPanel").classList.toggle("hidden",view!=="orders");$("adminCustomersPanel").classList.toggle("hidden",view!=="customers");$("adminCarePanel").classList.toggle("hidden",view!=="care");$("adminImagesPanel").classList.toggle("hidden",view!=="images");$("adminNewsletterPanel").classList.toggle("hidden",view!=="newsletter");renderAdminView();}
 async function renderAdminView(){
  if(!isStoreAdmin())return;
  try{await loadAdminData();}catch(error){
@@ -236,6 +236,7 @@ async function renderAdminView(){
   else if(adminView==="orders")$("adminOrdersList").innerHTML=message;
   else if(adminView==="customers")$("adminCustomersList").innerHTML=message;
   else if(adminView==="care")$("adminCareMessages").innerHTML=message;
+  else if(adminView==="newsletter")$("adminNewsletterList").innerHTML=message;
   return;
  }
  if(adminView==="products"){
@@ -250,7 +251,24 @@ async function renderAdminView(){
   await renderAdminCareMessages();
  }else if(adminView==="images"){
   await renderSiteImageManager();
+ }else if(adminView==="newsletter"){
+  await renderAdminNewsletter();
  }
+}
+async function renderAdminNewsletter(){
+ const host=$("adminNewsletterList");if(!host)return;
+ host.innerHTML='<p class="small-note">Loading newsletter subscribers…</p>';
+ const refresh='<button class="button button-outline" type="button" id="refreshAdminNewsletter">Refresh subscribers</button>';
+ try{
+  const {data,error}=await supabaseClient.from("newsletter_subscribers").select("id,email,created_at").order("created_at",{ascending:false});
+  if(error)throw error;
+  const rows=data||[];
+  host.innerHTML=refresh+`<p class="small-note">${rows.length} subscriber(s)</p>`+(rows.length?'<div class="admin-list">'+rows.map(row=>`<article class="admin-row"><div><strong>${esc(row.email)}</strong><div class="small-note">${esc(new Date(row.created_at).toLocaleString())}</div></div></article>`).join("")+'</div>':'<div class="account-empty">No newsletter subscribers yet.</div>');
+ }catch(error){
+  console.error("Newsletter subscribers could not load:",error);
+  host.innerHTML=refresh+`<p class="small-note">Could not load subscribers: ${esc(error.message||"Check newsletter admin RLS policy.")}</p>`;
+ }
+ const refreshButton=$("refreshAdminNewsletter");if(refreshButton)refreshButton.onclick=renderAdminNewsletter;
 }
 async function renderAdminCareMessages(){
  const host=$("adminCareMessages");if(!host)return;
