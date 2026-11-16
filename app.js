@@ -6,24 +6,15 @@ const STORE = {products:"nl_products_v2",cart:"nl_cart_v2",wishlist:"nl_wishlist
 const SUPABASE_URL = "https://dllqxqwfzzearcywhvxu.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ehnNF5KFVivvAanoeIinag_a1VSwvvb";
 const supabaseClient = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) : null;
-const seedProducts = [
-{id:"demo1",name:"Classic Oxford Shirt",price:3990,category:"Shirts",image_url:"https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=900&q=85",description:"A clean Oxford shirt for smart everyday wear.",stock:12},
-{id:"demo2",name:"Premium Cotton T-Shirt",price:2190,category:"Shirts",image_url:"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85",description:"Soft cotton with a modern, relaxed fit.",stock:20},
-{id:"demo3",name:"Men's Casual Overshirt",price:4590,category:"Casual",image_url:"https://images.unsplash.com/photo-1617137968427-85924c800a22?auto=format&fit=crop&w=900&q=85",description:"A versatile layer for everyday outfits.",stock:8},
-{id:"demo4",name:"Slim Fit Black Trousers",price:4990,category:"Formal",image_url:"https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=900&q=85",description:"Tailored trousers with a sharp silhouette.",stock:14},
-{id:"demo5",name:"Relaxed Fit Denim Jeans",price:5290,category:"Shirts",image_url:"https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=900&q=85",description:"Easy denim for daily wear.",stock:6},
-{id:"demo6",name:"Men's Minimal Hoodie",price:4290,category:"Casual",image_url:"https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=900&q=85",description:"A comfortable layer with a clean look.",stock:5},
-{id:"demo7",name:"Formal White Shirt",price:3790,category:"Formal",image_url:"https://images.unsplash.com/photo-1598033129183-c4f50c736f10?auto=format&fit=crop&w=900&q=85",description:"A crisp shirt for formal occasions.",stock:10},
-{id:"demo8",name:"Men's Polo Shirt",price:3290,category:"Shirts",image_url:"https://images.unsplash.com/photo-1625910513413-5fc2c2f7f8b5?auto=format&fit=crop&w=900&q=85",description:"A polished casual staple.",stock:11},
-{id:"shoe1",name:"Men's Everyday Sneakers",price:5990,category:"Shoes",image_url:"https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=85",description:"Comfortable sneakers for everyday movement.",stock:12}
-];
+const seedProducts = []; // No automatic demo/sample products.
+
 function read(key,fallback){try{const v=localStorage.getItem(key);return v?JSON.parse(v):fallback}catch{return fallback}}
 function write(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true}catch{toast("Browser storage is full. Remove a large product image and try again.");return false}}
 function esc(v=""){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function productPrice(p){const sale=Number(p?.sale_price);return sale>0&&sale<Number(p?.price)?sale:(Number(p?.price)||0)}
 function money(v){return new Intl.NumberFormat("en-PK",{style:"currency",currency:"PKR",maximumFractionDigits:0}).format(Number(v)||0)}
 function makeId(prefix="nl"){return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`}
-let products=(read(STORE.products,null)||seedProducts).map(p=>({...p,category:p.category==="Men"?"Shirts":(p.category||"Shirts")})),cart=read(STORE.cart,[]),wishlist=read(STORE.wishlist,[]),orders=read(STORE.orders,[]),customers=read(STORE.customers,[]);
+let products=(read(STORE.products,null)||seedProducts).filter(p=>!/^demo\d+$/.test(String(p.id))&&String(p.id)!=="shoe1").map(p=>({...p,category:p.category==="Men"?"Shirts":(p.category||"Shirts")})),cart=read(STORE.cart,[]),wishlist=read(STORE.wishlist,[]),orders=read(STORE.orders,[]),customers=read(STORE.customers,[]);
 let authUser=null, otpSent=false, customerRecoveryMode=false, activeCategory="All",searchTerm="",customerMode="signin",adminView="products",toastTimer,cartSyncBusy=false,storeAdmin=false,adminCareRealtimeChannel=null;
 let siteImages={};
 const SITE_IMAGE_SLOTS=[
