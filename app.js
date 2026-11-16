@@ -97,6 +97,7 @@ async function loadSupabaseProducts(){
     name:p.name||"Untitled product",
     price:Number(p.price)||0,
     sale_price:p.sale_price==null?null:Number(p.sale_price),
+    is_best_seller:p.is_best_seller===true,
     category:p.category||"Men",
     image_url:p.image_url||"",
     description:p.description||"",
@@ -118,7 +119,9 @@ function renderProducts(){
  const onSale=productPrice(p)<Number(p.price);
  const categoryMatch=activeCategory==="Sale"
   ? onSale
-  : !onSale&&(activeCategory==="All"||String(p.category).toLowerCase()===activeCategory.toLowerCase());
+  : activeCategory==="Best Sellers"
+   ? p.is_best_seller===true
+   : (activeCategory==="All"||String(p.category).toLowerCase()===activeCategory.toLowerCase());
  return categoryMatch&&(`${p.name} ${p.category} ${p.description||""}`).toLowerCase().includes(searchTerm.toLowerCase());
 });
  const sort=$("sortSelect").value;if(sort==="low")list.sort((a,b)=>productPrice(a)-productPrice(b));if(sort==="high")list.sort((a,b)=>productPrice(b)-productPrice(a));
@@ -127,6 +130,15 @@ function renderProducts(){
  $("productGrid").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addToCart(b.dataset.add));
  $("productGrid").querySelectorAll("[data-details]").forEach(b=>{b.onclick=()=>showProduct(b.dataset.details);b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showProduct(b.dataset.details)}}});
  $("productGrid").querySelectorAll("[data-wish]").forEach(b=>b.onclick=()=>toggleWishlist(b.dataset.wish));
+ renderBestSellers();
+}
+function renderBestSellers(){
+ const host=$("bestSellerGrid");if(!host)return;
+ const list=products.filter(p=>p.is_best_seller===true);
+ host.innerHTML=list.length?list.map(p=>{const saved=wishlist.some(x=>String(x)===String(p.id)),online=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(p.id)),sold=Number(p.stock)<=0||!online;return `<article class="product-card"><div class="product-image-wrap" data-details="${esc(p.id)}" role="button" tabindex="0" aria-label="View ${esc(p.name)}"><img class="product-image" src="${esc(p.image_url||"")}" alt="${esc(p.name)}" loading="lazy"><span class="product-badge">${sold?"Sold out":(productPrice(p)<Number(p.price)?"SALE":"BEST SELLER")}</span><button class="wishlist-heart ${saved?"is-saved":""}" type="button" data-wish="${esc(p.id)}" aria-label="${saved?"Remove from":"Add to"} wishlist: ${esc(p.name)}" aria-pressed="${saved}">${saved?"♥":"♡"}</button></div><div class="product-info"><div class="product-category">${esc(p.category||"Collection")}</div><h3 class="product-name">${esc(p.name)}</h3><span class="product-price">${productPrice(p)<Number(p.price)?`<del>${money(p.price)}</del> <strong>${money(productPrice(p))}</strong>`:money(p.price)}</span><span class="stock-label">${sold?"Currently unavailable":`${p.stock} available`}</span><div class="product-actions"><button type="button" data-details="${esc(p.id)}">Quick view</button></div><button class="quick-add" type="button" data-add="${esc(p.id)}" ${sold?"disabled":""}>${sold?"Sold out":"Add to bag +"}</button></div></article>`}).join(""):'<div class="empty-state">Our Best Sellers will appear here when you select products in the Admin Dashboard.</div>';
+ host.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addToCart(b.dataset.add));
+ host.querySelectorAll("[data-details]").forEach(b=>{b.onclick=()=>showProduct(b.dataset.details);b.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();showProduct(b.dataset.details)}}});
+ host.querySelectorAll("[data-wish]").forEach(b=>b.onclick=()=>toggleWishlist(b.dataset.wish));
 }
 function setCategory(category){activeCategory=category;$("filters").querySelectorAll("[data-category]").forEach(b=>b.classList.toggle("active",b.dataset.category===category));renderProducts()}
 async function addToCart(id,size="M",color="Black",qty=1){
@@ -230,8 +242,8 @@ async function renderAdminView(){
   return;
  }
  if(adminView==="products"){
-  $("adminProductList").innerHTML=products.map(p=>`<div class="admin-row"><div><strong>${esc(p.name)}</strong><div class="small-note">${money(p.price)}${productPrice(p)<Number(p.price)?` · Sale ${money(productPrice(p))}`:""} · ${esc(p.category)} · Stock ${p.stock}</div></div><div class="admin-row-actions"><button class="button button-outline" type="button" data-edit="${esc(p.id)}">Edit</button><button class="button button-outline" type="button" data-delete="${esc(p.id)}">Delete</button></div></div>`).join("")||'<p class="small-note">No products yet. Add one above.</p>';
-  $("adminProductList").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editProduct(b.dataset.edit));$("adminProductList").querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteProduct(b.dataset.delete));
+  $("adminProductList").innerHTML=products.map(p=>`<div class="admin-row"><div><strong>${esc(p.name)}</strong><div class="small-note">${money(p.price)}${productPrice(p)<Number(p.price)?` · Sale ${money(productPrice(p))}`:""} · ${esc(p.category)} · Stock ${p.stock} · Best Seller: ${p.is_best_seller?"Yes":"No"}</div></div><div class="admin-row-actions"><button class="button button-outline" type="button" data-best-toggle="${esc(p.id)}" aria-pressed="${p.is_best_seller===true}">${p.is_best_seller?"Remove Best Seller":"Make Best Seller"}</button><button class="button button-outline" type="button" data-edit="${esc(p.id)}">Edit</button><button class="button button-outline" type="button" data-delete="${esc(p.id)}">Delete</button></div></div>`).join("")||'<p class="small-note">No products yet. Add one above.</p>';
+  $("adminProductList").querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>editProduct(b.dataset.edit));$("adminProductList").querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteProduct(b.dataset.delete));$("adminProductList").querySelectorAll("[data-best-toggle]").forEach(b=>b.onclick=()=>toggleBestSeller(b.dataset.bestToggle));
  }else if(adminView==="orders"){
   $("adminOrdersList").innerHTML=orders.length?orders.map(o=>`<article class="admin-view-card"><div class="order-preview-row"><strong>${esc(o.order_number||o.id)}</strong><span class="order-status">${esc(o.status||"pending")}</span></div><p class="small-note">${esc(o.customer_name||"Customer")} · ${esc(o.customer_email||"")} · ${money(o.total_amount)}</p><p class="small-note">${esc(o.phone||"")} · ${esc(o.city||"")} · ${esc(o.payment_method||"")}</p><p class="small-note">${esc(o.shipping_address||"")}</p><p>${(o.order_items||[]).map(i=>`${esc(i.product_name)} × ${i.quantity} (${esc(i.size||"-" )}, ${esc(i.color||"-")})`).join("<br>")}</p><label class="admin-status-label">Update status<select data-status="${esc(o.id)}">${["pending","confirmed","processing","shipped","delivered","cancelled"].map(st=>`<option value="${st}" ${String(o.status).toLowerCase()===st?"selected":""}>${st[0].toUpperCase()+st.slice(1)}</option>`).join("")}</select></label></article>`).join(""):'<div class="account-empty">No online orders yet.</div>';
   $("adminOrdersList").querySelectorAll("[data-status]").forEach(sel=>sel.onchange=async()=>{sel.disabled=true;try{const {data,error}=await supabaseClient.from("orders").update({status:sel.value}).eq("id",sel.dataset.status).select("id,status").single();if(error)throw error;if(!data)throw new Error("No order was updated. Check admin permissions.");toast("Order status updated online.");await renderAdminView();}catch(error){toast("Could not update order: "+error.message);sel.disabled=false;}});
@@ -322,8 +334,15 @@ async function uploadSiteImage(key,file){
  siteImages[key]=data.publicUrl;applySiteImage(key,data.publicUrl);
 }
 
-function resetProductForm(){const f=$("productForm");f.reset();f.elements.id.value="";$("saveProductBtn").textContent="Add product";$("productFormMessage").textContent=""}
-function editProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;const f=$("productForm");["id","name","price","sale_price","stock","category","description","image_url"].forEach(k=>{if(f.elements[k])f.elements[k].value=p[k]??""});$("saveProductBtn").textContent="Update product";$("productFormMessage").textContent="Editing an online catalogue product.";f.scrollIntoView({behavior:"smooth",block:"center"})}
+function resetProductForm(){const f=$("productForm");f.reset();f.elements.id.value="";f.elements.is_best_seller.checked=false;$("saveProductBtn").textContent="Add product";$("productFormMessage").textContent=""}
+function editProduct(id){const p=products.find(x=>String(x.id)===String(id));if(!p)return;const f=$("productForm");["id","name","price","sale_price","stock","category","description","image_url"].forEach(k=>{if(f.elements[k])f.elements[k].value=p[k]??""});f.elements.is_best_seller.checked=p.is_best_seller===true;$("saveProductBtn").textContent="Update product";$("productFormMessage").textContent="Editing an online catalogue product.";f.scrollIntoView({behavior:"smooth",block:"center"})}
+async function toggleBestSeller(id){
+ const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+ if(!supabaseClient||!authUser||!isStoreAdmin()){toast("Admin access is required for this action.");return;}
+ if(String(id).startsWith("demo")||String(id).startsWith("shoe")){toast("Preview items cannot be selected. Add this product to the online catalogue first.");return;}
+ try{const {data,error}=await supabaseClient.from("products").update({is_best_seller:!p.is_best_seller}).eq("id",id).select("id,is_best_seller").single();if(error)throw error;if(!data)throw new Error("No product was updated. Check admin permissions.");await loadSupabaseProducts();renderProducts();renderAdminView();toast(data.is_best_seller?"Added to Best Sellers.":"Removed from Best Sellers.");}
+ catch(error){toast("Could not update Best Seller: "+(error.message||"Check Supabase permissions."));}
+}
 async function deleteProduct(id){
  const p=products.find(x=>String(x.id)===String(id));if(!p)return;
  if(!supabaseClient||!authUser||!isStoreAdmin()){toast("Admin access is required for this action.");return;}
@@ -346,7 +365,7 @@ async function saveProduct(e){
  let image=f.elements.image_url.value.trim()||old?.image_url||"";
  try{if(f.elements.image.files[0])image=await fileAsDataURL(f.elements.image.files[0]);}
  catch(err){$("productFormMessage").textContent=err.message;return;}
- const saleRaw=f.elements.sale_price.value.trim();const salePrice=saleRaw===""?null:Number(saleRaw);const row={name:f.elements.name.value.trim(),price:Number(f.elements.price.value),sale_price:salePrice,stock:Number(f.elements.stock.value),category:f.elements.category.value,description:f.elements.description.value.trim(),image_url:image||"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85"};
+ const saleRaw=f.elements.sale_price.value.trim();const salePrice=saleRaw===""?null:Number(saleRaw);const row={name:f.elements.name.value.trim(),price:Number(f.elements.price.value),sale_price:salePrice,is_best_seller:f.elements.is_best_seller.checked||f.elements.category.value==="Best Sellers",stock:Number(f.elements.stock.value),category:f.elements.category.value,description:f.elements.description.value.trim(),image_url:image||"https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=900&q=85"};
  if(!row.name||!Number.isFinite(row.price)||row.price<=0||!Number.isInteger(row.stock)||row.stock<0||(row.sale_price!==null&&(!Number.isFinite(row.sale_price)||row.sale_price<=0||row.sale_price>=row.price))){$("productFormMessage").textContent="Enter a product name, valid price and stock. Sale price must be lower than the regular price.";return;}
  if(id&&(String(id).startsWith("demo")||String(id).startsWith("shoe"))){$("productFormMessage").textContent="Preview items cannot be edited. Add this item as a new online product instead.";return;}
  const btn=$("saveProductBtn");btn.disabled=true;
@@ -455,7 +474,9 @@ async function setup(){
  $("searchToggle").onclick=()=>{$("searchPanel").classList.toggle("hidden");if(!$("searchPanel").classList.contains("hidden"))$("searchInput").focus()};
  $("searchClose").onclick=()=>{$("searchPanel").classList.add("hidden");$("searchInput").value="";searchTerm="";renderProducts()};
  $("searchInput").oninput=e=>{searchTerm=e.target.value;renderProducts()};$("sortSelect").onchange=renderProducts;
- $("filters").querySelectorAll("[data-category]").forEach(b=>b.onclick=()=>setCategory(b.dataset.category));
+ $("filters").querySelectorAll("[data-category]").forEach(b=>b.onclick=()=>{setCategory(b.dataset.category);$("shop").scrollIntoView({behavior:"smooth",block:"start"});});
+ document.querySelectorAll("[data-nav-category]").forEach(a=>a.onclick=()=>setCategory(a.dataset.navCategory));
+ const bestSellerBrowseBtn=$("bestSellerBrowseBtn");if(bestSellerBrowseBtn)bestSellerBrowseBtn.onclick=()=>{setCategory("Best Sellers");$("shop").scrollIntoView({behavior:"smooth",block:"start"});};
  document.querySelectorAll(".collection-card").forEach(b=>b.onclick=()=>{setCategory(b.dataset.category);location.hash="#shop"});
  $("menuToggle").onclick=()=>{const nav=document.querySelector(".main-nav");nav.classList.toggle("mobile-nav");$("menuToggle").setAttribute("aria-expanded",nav.classList.contains("mobile-nav"))};
  document.querySelectorAll(".main-nav a").forEach(a=>a.onclick=()=>document.querySelector(".main-nav").classList.remove("mobile-nav"));

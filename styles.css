@@ -805,3 +805,55 @@ footer{padding:22px 4% 14px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr
   color:#171613;
   box-shadow:none;
 }
+
+/* Best Seller admin control — added without changing existing component styles */
+.admin-best-seller-toggle{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink,#222);}
+.admin-best-seller-toggle input{width:17px;height:17px;accent-color:#b18a43;}
+
+
+/* Requested category links directly beneath the New Arrivals heading */
+.shop-section .shop-toolbar{display:block;margin:12px auto 18px;position:relative}
+.shop-section .filters{display:flex!important;justify-content:center;align-items:center;flex-wrap:wrap;gap:24px;padding:0 120px 10px 0;overflow:visible}
+.shop-section .filters .filter[data-category="All"],
+.shop-section .filters .filter[data-category="Best Sellers"]{display:none!important}
+.shop-section .filters .filter{border:0;border-radius:0;background:transparent;color:var(--ink);padding:8px 2px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.shop-section .filters .filter.active,
+.shop-section .filters .filter:hover{background:transparent;color:var(--ink);border-color:transparent;text-decoration:underline;text-underline-offset:5px}
+.shop-section #sortSelect{position:absolute;right:0;top:0;margin:0}
+@media(max-width:650px){
+ .shop-section .shop-toolbar{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+ .shop-section .filters{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;padding:0 0 8px;gap:20px}
+ .shop-section #sortSelect{position:static;align-self:flex-end}
+}
+
+
+/* Category options moved from New Arrivals to the Best Sellers heading */
+.best-seller-heading{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.best-seller-heading .filters{display:flex!important;align-items:center;justify-content:center;flex:1;gap:24px;overflow:visible;padding:0 8px}
+.best-seller-heading .filters .filter[data-category="All"],
+.best-seller-heading .filters .filter[data-category="Best Sellers"]{display:none!important}
+.best-seller-heading .filters .filter{border:0;border-radius:0;background:transparent;color:var(--ink);padding:8px 2px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap}
+.best-seller-heading .filters .filter.active,
+.best-seller-heading .filters .filter:hover{background:transparent;color:var(--ink);border-color:transparent;text-decoration:underline;text-underline-offset:5px}
+@media(max-width:650px){.best-seller-heading{align-items:flex-start;gap:10px}.best-seller-heading .filters{justify-content:flex-start;flex-wrap:nowrap;overflow-x:auto;flex:1 1 100%;gap:20px;padding:0 0 8px}}
+
+
+/* Four independent category buttons directly below New Arrivals */
+.shop-toolbar{display:flex!important;align-items:center;justify-content:center;position:relative;min-height:44px;margin:8px auto 24px!important;gap:14px}
+.shop-toolbar .shop-category-filters{display:flex!important;justify-content:center;align-items:center;flex-wrap:wrap;gap:12px;padding:0;margin:0}
+.shop-toolbar .shop-category-filters .filter{display:inline-flex!important;align-items:center;justify-content:center;min-width:92px;padding:10px 18px;border:1px solid #cfc6b8;border-radius:0;background:transparent;color:var(--ink);font-size:11px;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+.shop-toolbar .shop-category-filters .filter:hover,
+.shop-toolbar .shop-category-filters .filter.active{background:var(--ink);border-color:var(--ink);color:#fff}
+.shop-toolbar #sortSelect{position:absolute;right:0;top:0;margin:0}
+@media(max-width:700px){
+ .shop-toolbar{flex-direction:column!important;align-items:stretch!important;gap:12px}
+ .shop-toolbar .shop-category-filters{justify-content:center;gap:8px}
+ .shop-toolbar .shop-category-filters .filter{min-width:0;padding:9px 12px}
+ .shop-toolbar #sortSelect{position:static;align-self:flex-end}
+}
+
+/* Best Sellers section: dedicated customer-facing browse button */
+.best-seller-heading{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.best-seller-action{appearance:none;border:1px solid var(--ink);background:transparent;color:var(--ink);padding:10px 18px;font:inherit;font-size:10px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:background .2s,color .2s}
+.best-seller-action:hover{background:var(--ink);color:#fff}
+@media(max-width:600px){.best-seller-heading{gap:12px}.best-seller-action{padding:8px 12px}.best-seller-heading .text-link{margin-left:auto}}
