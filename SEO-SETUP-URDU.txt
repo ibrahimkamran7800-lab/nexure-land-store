@@ -1,15 +1,32 @@
-NEXURE LAND STORE — SEO update
+NEXURE LAND STORE — SEO LINKS & LOGO UPDATE
 
-Is update mein:
-- Search engine robots meta set: index, follow.
-- Google result title aur meta description ko barqarar rakha gaya.
-- Open Graph locale aur image alt metadata add ki.
-- Organization + WebSite structured data add ki, original logo, public email aur public phone ke sath.
-- Sitemap mein sirf canonical homepage rakha gaya.
+Website:
+https://nexure-land-store.ibrahimkamran7800.workers.dev/
 
-Zaroori wazahat:
-Website abhi single-page storefront hai. Navigation ke #shop, #collections, #about jaisay links isi homepage ke sections hain, alag URLs/pages nahi. Is liye unhein sitemap mein alag pages ki tarah add karna ghalat hota. Google Search Console mein 1 discovered page is structure ke mutabiq expected hai.
+Important public links after deployment:
+Homepage:
+https://nexure-land-store.ibrahimkamran7800.workers.dev/
+Sitemap (Google Search Console):
+https://nexure-land-store.ibrahimkamran7800.workers.dev/sitemap.xml
+Robots:
+https://nexure-land-store.ibrahimkamran7800.workers.dev/robots.txt
+Favicon:
+https://nexure-land-store.ibrahimkamran7800.workers.dev/assets/brand/nexure-land-favicon.png
+Main logo:
+https://nexure-land-store.ibrahimkamran7800.workers.dev/assets/brand/nexure-land-horizontal-logo.png
 
-Products Supabase se dynamic load hotay hain aur har product ka apna crawlable URL is project mein maujood nahi. Product-level Google indexing ke liye baad mein unique product URLs aur server-rendered/prerendered metadata ki zaroorat hogi.
+Included:
+- Supplied original horizontal logo at the existing header/footer asset path.
+- Supplied original favicon at the existing favicon asset path.
+- Canonical URL, robots meta, Open Graph, Twitter preview metadata and Organization/WebSite structured data in index.html.
+- robots.txt points to the sitemap.
+- sitemap.xml contains the canonical homepage only. This is a single-page storefront; #shop/#about anchors are not separate pages.
 
-Backend, Supabase configuration, login, cart, checkout aur admin functionality ko is SEO update mein edit nahi kiya gaya.
+Google Search Console:
+- Submit sitemap.xml only if it has not already been successfully submitted.
+- After deployment, inspect the homepage URL if needed.
+- An indexing-request quota message is a Search Console limit, not a website error.
+
+Google controls when and how title, description and favicon appear in search results; timing is not guaranteed.
+Official social profile links were not added because none were supplied.
+Backend, Supabase, login, cart, checkout and admin code are unchanged.
