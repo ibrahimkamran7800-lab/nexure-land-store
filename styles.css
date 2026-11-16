@@ -1208,3 +1208,58 @@ footer{padding:22px 4% 14px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr
   min-width: 0 !important;
   max-width: 100% !important;
 }
+
+/* Premium, compact empty state for the New Arrivals area */
+.shop-empty-state{
+  min-height:0;
+  padding:clamp(28px,5vw,54px) 18px;
+  margin:0 auto;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  text-align:center;
+  background:linear-gradient(135deg,#f7f3eb 0%,#eee8dc 100%);
+  border:1px solid #e0d8c9;
+  color:#171715;
+}
+.shop-empty-kicker{
+  display:block;
+  color:#9a8056;
+  font-size:9px;
+  letter-spacing:.22em;
+  font-weight:600;
+}
+.shop-empty-state h3{
+  margin:0;
+  font:clamp(23px,3vw,32px)/1.15 var(--serif);
+  font-weight:500;
+}
+.shop-empty-state p{
+  max-width:360px;
+  margin:0;
+  color:#77766f;
+  font-size:12px;
+  line-height:1.65;
+}
+.shop-empty-link{
+  margin-top:7px;
+  padding:10px 16px;
+  border:1px solid #b8a17a;
+  background:transparent;
+  color:#171715;
+  font-size:10px;
+  letter-spacing:.09em;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+.shop-empty-link:hover{background:#171715;color:#fff;border-color:#171715}
+.store-message{margin:12px auto 0;max-width:460px;font-size:10px;line-height:1.5;color:#898174}
+@media(max-width:600px){
+  .shop-empty-state{padding:28px 14px;gap:8px}
+  .shop-empty-state h3{font-size:24px}
+  .shop-empty-state p{font-size:11px}
+  .shop-empty-link{padding:9px 13px;font-size:9px}
+}
