@@ -1263,3 +1263,27 @@ footer{padding:22px 4% 14px;display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr
   .shop-empty-state p{font-size:11px}
   .shop-empty-link{padding:9px 13px;font-size:9px}
 }
+
+/* NEXURE&LAND category range heading */
+.collections .section-heading .category-range{display:block;margin:0 0 5px;color:#987a4e;font:700 9px/1.5 var(--sans);letter-spacing:.12em;text-transform:uppercase;text-align:center}
+.collections .section-heading .category-range span{color:#c39b5d;padding:0 5px}
+@media(max-width:700px){.collections .section-heading .category-range{font-size:7px;letter-spacing:.045em;line-height:1.7;padding:0 6px}.collections .section-heading .category-range span{padding:0 2px}.collections .section-heading h2{font-size:14px}}
+
+/* NEXURE&LAND customer product reviews */
+.product-reviews{margin-top:30px;padding-top:24px;border-top:1px solid var(--line)}
+.reviews-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:14px}
+.reviews-heading h3{font:26px/1.1 var(--serif);margin:4px 0 0}
+.reviews-summary{font-size:12px;font-weight:700;white-space:nowrap;color:var(--ink)}
+.reviews-list{display:grid;gap:10px}
+.review-card{padding:14px 16px;border:1px solid var(--line);background:#fff}
+.review-card-top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.review-card-top strong{font-size:13px}.review-stars{color:#a77b27;letter-spacing:2px;white-space:nowrap}
+.review-card p{font-size:13px;line-height:1.65;margin:9px 0;color:var(--ink)}
+.review-card small,.review-form-note,.review-form .small-note{font-size:11px;color:var(--muted)}
+.review-form{display:grid;gap:12px;margin-top:18px;padding:18px;background:#f5f3ef;border:1px solid var(--line)}
+.review-form h4{font:20px/1.2 var(--serif);margin:0}
+.review-form label{display:grid;gap:6px;font-size:12px;font-weight:700}
+.review-form select,.review-form textarea{width:100%;padding:11px;border:1px solid var(--line);background:#fff;color:var(--ink);font:inherit}
+.review-form textarea{resize:vertical;line-height:1.5}
+.review-form .button{justify-self:start}.review-form-note{padding:14px;background:#f5f3ef}
+.review-form-note .text-link{border:0;background:none;text-decoration:underline;cursor:pointer;font:inherit;color:var(--ink)}
