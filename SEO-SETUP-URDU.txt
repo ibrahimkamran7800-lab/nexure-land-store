@@ -1,4 +1,4 @@
-NEXURE LAND STORE — SEO LINKS & LOGO UPDATE
+NEXURE&LAND — GOOGLE SEO UPDATE
 
 Website:
 https://nexure-land-store.ibrahimkamran7800.workers.dev/
@@ -18,7 +18,10 @@ https://nexure-land-store.ibrahimkamran7800.workers.dev/assets/brand/nexure-land
 Included:
 - Supplied original horizontal logo at the existing header/footer asset path.
 - Supplied original favicon at the existing favicon asset path.
-- Canonical URL, robots meta, Open Graph, Twitter preview metadata and Organization/WebSite structured data in index.html.
+- Exact brand spelling NEXURE&LAND set as the primary page, search and social title.
+- Updated meta description to mention men’s clothing and shoes in Pakistan.
+- Open Graph, Twitter preview metadata and Organization/WebSite structured data aligned with NEXURE&LAND.
+- Existing canonical URL, robots meta, sitemap and favicon preserved.
 - robots.txt points to the sitemap.
 - sitemap.xml contains the canonical homepage only. This is a single-page storefront; #shop/#about anchors are not separate pages.
 
@@ -30,3 +33,5 @@ Google Search Console:
 Google controls when and how title, description and favicon appear in search results; timing is not guaranteed.
 Official social profile links were not added because none were supplied.
 Backend, Supabase, login, cart, checkout and admin code are unchanged.
+
+Google decides the final title, description, ranking and favicon shown in Search. These changes improve brand signals but do not guarantee an immediate first-place result.
